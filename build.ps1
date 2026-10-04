@@ -65,22 +65,55 @@ $adapter = @"
   // ---------- conexión a Supabase (misma forma que usaba la app: colecciones de documentos) ----------
   const SB = window.supabase.createClient("$url", "$key", { db: { schema: "teamc" } });
   let sesion = null;
+  function errorAuth(e){
+    const m = (e && (e.message || e.msg) || "").toLowerCase();
+    if (/invalid login|invalid credentials/.test(m)) return "Mail o contraseña incorrectos.";
+    if (/rate limit|too many|security purposes/.test(m)) return "Se alcanzó el límite de intentos. Esperá unos minutos y probá de nuevo.";
+    if (/password should be|at least/.test(m)) return "La contraseña tiene que tener al menos 8 caracteres.";
+    return "No se pudo: " + (e && e.message ? e.message : "probá de nuevo.");
+  }
   function pedirLogin(){
     const el = sheet(``<h2>Entrar para editar</h2>
-      <p class="note">Te mandamos un link a tu mail. Solo pueden editar los mails autorizados del equipo.</p>
-      <div class="field"><label for="lgMail">Tu mail</label><input id="lgMail" type="email" autocomplete="email" placeholder="tu@mail.com"></div>
-      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="lgOk">Mandarme el link</button></div>``);
+      <p class="note">Solo pueden editar los mails autorizados del equipo.</p>
+      <div class="field"><label for="lgMail">Tu mail</label><input id="lgMail" type="email" autocomplete="username" placeholder="tu@mail.com"></div>
+      <div class="field"><label for="lgPass">Contraseña</label><input id="lgPass" type="password" autocomplete="current-password"></div>
+      <div id="lgErr"></div>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="lgOk">Entrar</button></div>
+      <p class="note">¿Sin contraseña? <button class="linkish" id="lgLink" style="width:auto;color:var(--accent);font-weight:700">Mandarme un link por mail</button> (máximo 2 mails por hora).</p>``);
     `$("lgMail").focus();
+    const err = msg => { el.querySelector("#lgErr").innerHTML = msg ? ``<div class="alert err">`${esc(msg)}</div>`` : ""; };
     el.querySelector("#lgOk").onclick = async () => {
-      const mail = `$("lgMail").value.trim(); if (!mail) return;
-      const { error } = await SB.auth.signInWithOtp({ email: mail, options: { emailRedirectTo: location.origin + location.pathname + location.hash } });
-      if (error) { toast("No se pudo mandar el link. Probá de nuevo."); return; }
-      closeSheet(); toast("Te mandamos el link. Revisá tu mail.");
+      const email = `$("lgMail").value.trim(), password = `$("lgPass").value; if (!email || !password){ err("Completá mail y contraseña."); return; }
+      const b = el.querySelector("#lgOk"); b.disabled = true; b.textContent = "Entrando…";
+      const { error } = await SB.auth.signInWithPassword({ email, password });
+      b.disabled = false; b.textContent = "Entrar";
+      if (error){ err(errorAuth(error)); return; }
+      closeSheet(); toast("Listo, ya podés editar");
+    };
+    el.querySelector("#lgPass").addEventListener("keydown", e => { if (e.key === "Enter") el.querySelector("#lgOk").click(); });
+    el.querySelector("#lgLink").onclick = async () => {
+      const email = `$("lgMail").value.trim(); if (!email){ err("Escribí tu mail."); return; }
+      const { error } = await SB.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
+      if (error){ err(errorAuth(error)); return; }
+      closeSheet(); toast("Te mandamos el link. Abrilo desde este mismo navegador.");
+    };
+  }
+  function cambiarClave(){
+    const el = sheet(``<h2>Cambiar contraseña</h2>
+      <div class="field"><label for="ccPass">Contraseña nueva (mínimo 8 caracteres)</label><input id="ccPass" type="password" autocomplete="new-password"></div>
+      <div id="ccErr"></div>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="ccOk">Guardar</button></div>``);
+    `$("ccPass").focus();
+    el.querySelector("#ccOk").onclick = async () => {
+      const password = `$("ccPass").value; if (password.length < 8){ el.querySelector("#ccErr").innerHTML = '<div class="alert err">Tiene que tener al menos 8 caracteres.</div>'; return; }
+      const { error } = await SB.auth.updateUser({ password });
+      if (error){ el.querySelector("#ccErr").innerHTML = ``<div class="alert err">`${esc(errorAuth(error))}</div>``; return; }
+      closeSheet(); toast("Contraseña cambiada");
     };
   }
   function pintarSesion(){
     const b = `$("authbar"); if (!b) return;
-    if (sesion){ b.innerHTML = ``<span class="who">`${esc(sesion.user.email)}</span><button class="btn ghost sm" id="lgOut">Salir</button>``; `$("lgOut").onclick = async () => { await SB.auth.signOut(); }; }
+    if (sesion){ b.innerHTML = ``<span class="who">`${esc(sesion.user.email)}</span><button class="btn ghost sm" id="lgPw" title="Cambiar contraseña">Clave</button><button class="btn ghost sm" id="lgOut">Salir</button>``; `$("lgOut").onclick = async () => { await SB.auth.signOut(); toast("Sesión cerrada"); }; `$("lgPw").onclick = cambiarClave; }
     else { b.innerHTML = ``<button class="btn ghost sm" id="lgIn">Entrar</button>``; `$("lgIn").onclick = pedirLogin; }
   }
   const sinPermiso = () => { if (!sesion){ pedirLogin(); return Promise.reject({ code: "login" }); } return null; };

@@ -400,7 +400,7 @@ html,body{margin:0}
     const e = ev();
     if (e){
       const tot = compute(e), tengo = e.tengo || {};
-      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde","Ya tengo","Precio","Precio por","Costo estimado","Fuente del precio"]];
+      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde","Comprado","Precio","Precio por","Costo estimado","Fuente del precio"]];
       let totalCosto = 0;
       Object.keys(tot).sort((a, b) => { const ia = S.insumos[a] || {}, ib = S.insumos[b] || {}; return (CATS.indexOf(ia.categoria) - CATS.indexOf(ib.categoria)) || (ia.nombre || a).localeCompare(ib.nombre || b, "es"); })
         .forEach(k => { const ins = S.insumos[k] || {nombre:k}; const q = cantCompra(ins, tot[k].total); const c = Math.round(costoCompra(ins, tot[k].total)); totalCosto += c;
@@ -567,12 +567,12 @@ html,body{margin:0}
       <div class="stats">
         <div class="stat"><b>${money(pTot.s)}</b><span>presupuesto total</span></div>
         <div class="stat"><b>${money(pFal.s)}</b><span>falta comprar (${pend})</span></div>
-        <div class="stat"><b>${keys.length - pend}</b><span>ya tengo</span></div>
+        <div class="stat"><b>${keys.length - pend} de ${keys.length}</b><span>comprados o pedidos</span></div>
       </div>
       ${pTot.sin ? `<p class="note"><span class="pill warn">${pTot.sin} sin precio</span> no suman al presupuesto. Tocá el ingrediente y cargale el precio.</p>` : ""}
       <div class="ghead">
         <div class="chips">
-          <button class="chip" id="fFal" aria-pressed="${S.faltan}">Me falta</button>
+          <button class="chip" id="fFal" aria-pressed="${S.faltan}">Por comprar</button>
           <button class="chip" id="fTod" aria-pressed="${!S.faltan}">Todo</button>
         </div>
         <div class="chips"><button class="btn ghost sm" id="copy">Copiar lista</button><button class="btn ghost sm xlsBtn">Descargar Excel</button></div>
@@ -584,7 +584,7 @@ html,body{margin:0}
         return `<section class="group"><div class="ghead"><span class="eyebrow">${CAT_LABEL[c]}</span><span class="note">${list.length} · ${money(sub)}</span></div>
           <div class="card">${list.map(k => { const ins = S.insumos[k] || {nombre:k}; const o = tot[k]; const done = !!tengo[k]; const open = S.open[k]; return `
             <div class="row${done ? " done" : ""}">
-              <button class="check" data-tengo="${esc(k)}" aria-pressed="${done}" aria-label="Ya tengo ${esc(ins.nombre)}">${done ? "✓" : ""}</button>
+              <button class="check" data-tengo="${esc(k)}" aria-pressed="${done}" aria-label="Marcar ${esc(ins.nombre)} como comprado o pedido">${done ? "✓" : ""}</button>
               <button class="linkish grow" data-open="${esc(k)}" aria-expanded="${!!open}">
                 <div class="name">${esc(cap(ins.nombre))}</div>
                 ${ins.donde ? `<div class="sub">${esc(ins.donde)}</div>` : ""}
@@ -595,7 +595,7 @@ html,body{margin:0}
               <span class="precio-line"><b>${esc(precioLabel(ins))}</b>${ins.fuente ? " · " + esc(ins.fuente) : ""}</span>
               <button class="btn ghost sm" data-precio="${esc(k)}" style="justify-self:start">Editar precio</button></div>` : ""}`; }).join("")}
           </div></section>`;
-      }).join("") || '<div class="card"><div class="empty">Ya tenés todo. Tocá <b>Todo</b> para ver la lista completa.</div></div>'}
+      }).join("") || '<div class="card"><div class="empty">¡Ya compraste o pediste todo! Tocá <b>Todo</b> para ver la lista completa.</div></div>'}
       <p class="note">Las cantidades se redondean para arriba (kg de a 100 g, unidades enteras) y el presupuesto se calcula con esas cantidades. Es estimativo: los precios son de referencia mayorista y pueden cambiar. Tocá un ingrediente para ver de qué platos sale, su precio y la fuente.</p>`;
     v.querySelectorAll("[data-precio]").forEach(b => b.onclick = () => precioSheet(b.dataset.precio));
     $("fFal").onclick = () => { S.faltan = true; render(); };
@@ -658,8 +658,9 @@ html,body{margin:0}
     const n = equipoPersonas(e), d = equipoDias(e), sug = personasSugeridas(e), ok = e.utOk || {};
     const limp = Object.entries(S.insumos).filter(([k, i]) => Number(i.porCienDia) > 0).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, "es"));
     let costoLimp = 0;
-    const limpRows = limp.map(([k, ins]) => { const t = ins.porCienDia * n / 100 * d; const c = costoCompra(ins, t); costoLimp += c; return `
-      <div class="row"><button class="linkish grow" data-precio="${esc(k)}"><div class="name">${esc(cap(ins.nombre))}</div><div class="sub">${esc(nf(ins.porCienDia, 2))} por cada 100 personas por día · ${esc(precioLabel(ins))}</div></button>
+    const tengoL = e.tengo || {}; const limpOk = limp.filter(([k]) => tengoL[k]).length;
+    const limpRows = limp.map(([k, ins]) => { const t = ins.porCienDia * n / 100 * d; const c = costoCompra(ins, t); costoLimp += c; const hecho = !!tengoL[k]; return `
+      <div class="row${hecho ? " done" : ""}"><button class="check" data-tengo="${esc(k)}" aria-pressed="${hecho}" aria-label="Marcar ${esc(ins.nombre)} como comprado">${hecho ? "✓" : ""}</button><button class="linkish grow" data-precio="${esc(k)}"><div class="name">${esc(cap(ins.nombre))}</div><div class="sub">${esc(nf(ins.porCienDia, 2))} por cada 100 personas por día · ${esc(precioLabel(ins))}</div></button>
         <div class="qty">${esc(fmtQty(ins, t))}<div class="sub">${esc(money(c))}</div></div></div>`; }).join("");
     const ut = utensiliosOrden();
     const grupos = GRUPOS_UT.filter(g => ut.some(([id, u]) => u.grupo === g)).concat([...new Set(ut.map(([id, u]) => u.grupo))].filter(g => !GRUPOS_UT.includes(g)));
@@ -677,20 +678,20 @@ html,body{margin:0}
       </section>
 
       <section class="group">
-        <div class="ghead"><span class="eyebrow">Limpieza y descartables</span><span class="note">${esc(money(costoLimp))}</span></div>
+        <div class="ghead"><span class="eyebrow">Limpieza y descartables</span><span class="note">${limpOk} de ${limp.length} comprados · ${esc(money(costoLimp))}</span></div>
         <div class="card">${limpRows || '<div class="empty">Sin artículos de limpieza cargados.</div>'}</div>
-        <p class="note">Se suman solos a la pestaña <b>Compras</b> y al presupuesto. Tocá un artículo para cambiarle el precio.</p>
+        <p class="note">Tildá cada artículo cuando lo compres o lo pidas: se marca igual en la pestaña <b>Compras</b>. Se suman solos al presupuesto. Tocá el nombre para cambiarle el precio.</p>
       </section>
 
       ${personalHtml(e)}
 
       <section class="group">
-        <div class="ghead"><span class="eyebrow">Utensilios para ${n} personas</span><span class="note">${faltan} por conseguir</span></div>
+        <div class="ghead"><span class="eyebrow">Utensilios para ${n} personas</span><span class="note">${ut.filter(([id, u]) => cantUtensilio(u, n) > 0).length - faltan} de ${ut.filter(([id, u]) => cantUtensilio(u, n) > 0).length} listos</span></div>
         ${grupos.map(g => `
           <div class="group"><span class="note"><b>${esc(g)}</b></span>
           <div class="card">${ut.filter(([id, u]) => u.grupo === g).map(([id, u]) => { const q = cantUtensilio(u, n), has = !!ok[id]; return `
             <div class="row${has ? " done" : ""}">
-              <button class="check" data-utok="${esc(id)}" aria-pressed="${has}" aria-label="Ya tengo ${esc(u.nombre)}">${has ? "✓" : ""}</button>
+              <button class="check" data-utok="${esc(id)}" aria-pressed="${has}" aria-label="Ya tengo ${esc(u.nombre)}" title="Tildá cuando lo tengas o lo consigas">${has ? "✓" : ""}</button>
               <button class="linkish grow" data-ut="${esc(id)}"><div class="name">${esc(u.nombre)}</div>${u.nota ? `<div class="sub">${esc(u.nota)}</div>` : ""}</button>
               <div class="qty" style="font-size:18px">${q}</div>
             </div>`; }).join("")}</div></div>`).join("")}
@@ -703,6 +704,7 @@ html,body{margin:0}
     $("eqN").oninput = () => saveEq("personas", parseInt($("eqN").value, 10) || 1);
     $("eqD").oninput = () => saveEq("dias", parseInt($("eqD").value, 10) || 1);
     v.querySelectorAll("[data-precio]").forEach(b => b.onclick = () => precioSheet(b.dataset.precio));
+    v.querySelectorAll("[data-tengo]").forEach(b => b.onclick = () => { const k = b.dataset.tengo; e.tengo = e.tengo || {}; if (e.tengo[k]) delete e.tengo[k]; else e.tengo[k] = true; saveEvent(true); render(); });
     v.querySelectorAll("[data-utok]").forEach(b => b.onclick = () => { const id = b.dataset.utok; e.utOk = e.utOk || {}; if (e.utOk[id]) delete e.utOk[id]; else e.utOk[id] = true; saveEvent(true); render(); });
     v.querySelectorAll("[data-ut]").forEach(b => b.onclick = () => utensilioSheet(b.dataset.ut));
     v.querySelectorAll("[data-rolstep]").forEach(b => b.onclick = () => {
@@ -1058,22 +1060,55 @@ html,body{margin:0}
   // ---------- conexión a Supabase (misma forma que usaba la app: colecciones de documentos) ----------
   const SB = window.supabase.createClient("https://gtkbnbijembffspgwfno.supabase.co", "sb_publishable_SwiU5aIuLqz4vyO7PnsXmg_wJD7ZveT", { db: { schema: "teamc" } });
   let sesion = null;
+  function errorAuth(e){
+    const m = (e && (e.message || e.msg) || "").toLowerCase();
+    if (/invalid login|invalid credentials/.test(m)) return "Mail o contraseña incorrectos.";
+    if (/rate limit|too many|security purposes/.test(m)) return "Se alcanzó el límite de intentos. Esperá unos minutos y probá de nuevo.";
+    if (/password should be|at least/.test(m)) return "La contraseña tiene que tener al menos 8 caracteres.";
+    return "No se pudo: " + (e && e.message ? e.message : "probá de nuevo.");
+  }
   function pedirLogin(){
     const el = sheet(`<h2>Entrar para editar</h2>
-      <p class="note">Te mandamos un link a tu mail. Solo pueden editar los mails autorizados del equipo.</p>
-      <div class="field"><label for="lgMail">Tu mail</label><input id="lgMail" type="email" autocomplete="email" placeholder="tu@mail.com"></div>
-      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="lgOk">Mandarme el link</button></div>`);
+      <p class="note">Solo pueden editar los mails autorizados del equipo.</p>
+      <div class="field"><label for="lgMail">Tu mail</label><input id="lgMail" type="email" autocomplete="username" placeholder="tu@mail.com"></div>
+      <div class="field"><label for="lgPass">Contraseña</label><input id="lgPass" type="password" autocomplete="current-password"></div>
+      <div id="lgErr"></div>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="lgOk">Entrar</button></div>
+      <p class="note">¿Sin contraseña? <button class="linkish" id="lgLink" style="width:auto;color:var(--accent);font-weight:700">Mandarme un link por mail</button> (máximo 2 mails por hora).</p>`);
     $("lgMail").focus();
+    const err = msg => { el.querySelector("#lgErr").innerHTML = msg ? `<div class="alert err">${esc(msg)}</div>` : ""; };
     el.querySelector("#lgOk").onclick = async () => {
-      const mail = $("lgMail").value.trim(); if (!mail) return;
-      const { error } = await SB.auth.signInWithOtp({ email: mail, options: { emailRedirectTo: location.origin + location.pathname + location.hash } });
-      if (error) { toast("No se pudo mandar el link. Probá de nuevo."); return; }
-      closeSheet(); toast("Te mandamos el link. Revisá tu mail.");
+      const email = $("lgMail").value.trim(), password = $("lgPass").value; if (!email || !password){ err("Completá mail y contraseña."); return; }
+      const b = el.querySelector("#lgOk"); b.disabled = true; b.textContent = "Entrando…";
+      const { error } = await SB.auth.signInWithPassword({ email, password });
+      b.disabled = false; b.textContent = "Entrar";
+      if (error){ err(errorAuth(error)); return; }
+      closeSheet(); toast("Listo, ya podés editar");
+    };
+    el.querySelector("#lgPass").addEventListener("keydown", e => { if (e.key === "Enter") el.querySelector("#lgOk").click(); });
+    el.querySelector("#lgLink").onclick = async () => {
+      const email = $("lgMail").value.trim(); if (!email){ err("Escribí tu mail."); return; }
+      const { error } = await SB.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
+      if (error){ err(errorAuth(error)); return; }
+      closeSheet(); toast("Te mandamos el link. Abrilo desde este mismo navegador.");
+    };
+  }
+  function cambiarClave(){
+    const el = sheet(`<h2>Cambiar contraseña</h2>
+      <div class="field"><label for="ccPass">Contraseña nueva (mínimo 8 caracteres)</label><input id="ccPass" type="password" autocomplete="new-password"></div>
+      <div id="ccErr"></div>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="ccOk">Guardar</button></div>`);
+    $("ccPass").focus();
+    el.querySelector("#ccOk").onclick = async () => {
+      const password = $("ccPass").value; if (password.length < 8){ el.querySelector("#ccErr").innerHTML = '<div class="alert err">Tiene que tener al menos 8 caracteres.</div>'; return; }
+      const { error } = await SB.auth.updateUser({ password });
+      if (error){ el.querySelector("#ccErr").innerHTML = `<div class="alert err">${esc(errorAuth(error))}</div>`; return; }
+      closeSheet(); toast("Contraseña cambiada");
     };
   }
   function pintarSesion(){
     const b = $("authbar"); if (!b) return;
-    if (sesion){ b.innerHTML = `<span class="who">${esc(sesion.user.email)}</span><button class="btn ghost sm" id="lgOut">Salir</button>`; $("lgOut").onclick = async () => { await SB.auth.signOut(); }; }
+    if (sesion){ b.innerHTML = `<span class="who">${esc(sesion.user.email)}</span><button class="btn ghost sm" id="lgPw" title="Cambiar contraseña">Clave</button><button class="btn ghost sm" id="lgOut">Salir</button>`; $("lgOut").onclick = async () => { await SB.auth.signOut(); toast("Sesión cerrada"); }; $("lgPw").onclick = cambiarClave; }
     else { b.innerHTML = `<button class="btn ghost sm" id="lgIn">Entrar</button>`; $("lgIn").onclick = pedirLogin; }
   }
   const sinPermiso = () => { if (!sesion){ pedirLogin(); return Promise.reject({ code: "login" }); } return null; };

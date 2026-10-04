@@ -377,7 +377,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
     const e = ev();
     if (e){
       const tot = compute(e), tengo = e.tengo || {};
-      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde","Ya tengo","Precio","Precio por","Costo estimado","Fuente del precio"]];
+      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde","Comprado","Precio","Precio por","Costo estimado","Fuente del precio"]];
       let totalCosto = 0;
       Object.keys(tot).sort((a, b) => { const ia = S.insumos[a] || {}, ib = S.insumos[b] || {}; return (CATS.indexOf(ia.categoria) - CATS.indexOf(ib.categoria)) || (ia.nombre || a).localeCompare(ib.nombre || b, "es"); })
         .forEach(k => { const ins = S.insumos[k] || {nombre:k}; const q = cantCompra(ins, tot[k].total); const c = Math.round(costoCompra(ins, tot[k].total)); totalCosto += c;
@@ -544,12 +544,12 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
       <div class="stats">
         <div class="stat"><b>${money(pTot.s)}</b><span>presupuesto total</span></div>
         <div class="stat"><b>${money(pFal.s)}</b><span>falta comprar (${pend})</span></div>
-        <div class="stat"><b>${keys.length - pend}</b><span>ya tengo</span></div>
+        <div class="stat"><b>${keys.length - pend} de ${keys.length}</b><span>comprados o pedidos</span></div>
       </div>
       ${pTot.sin ? `<p class="note"><span class="pill warn">${pTot.sin} sin precio</span> no suman al presupuesto. Tocá el ingrediente y cargale el precio.</p>` : ""}
       <div class="ghead">
         <div class="chips">
-          <button class="chip" id="fFal" aria-pressed="${S.faltan}">Me falta</button>
+          <button class="chip" id="fFal" aria-pressed="${S.faltan}">Por comprar</button>
           <button class="chip" id="fTod" aria-pressed="${!S.faltan}">Todo</button>
         </div>
         <div class="chips"><button class="btn ghost sm" id="copy">Copiar lista</button><button class="btn ghost sm xlsBtn">Descargar Excel</button></div>
@@ -561,7 +561,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
         return `<section class="group"><div class="ghead"><span class="eyebrow">${CAT_LABEL[c]}</span><span class="note">${list.length} · ${money(sub)}</span></div>
           <div class="card">${list.map(k => { const ins = S.insumos[k] || {nombre:k}; const o = tot[k]; const done = !!tengo[k]; const open = S.open[k]; return `
             <div class="row${done ? " done" : ""}">
-              <button class="check" data-tengo="${esc(k)}" aria-pressed="${done}" aria-label="Ya tengo ${esc(ins.nombre)}">${done ? "✓" : ""}</button>
+              <button class="check" data-tengo="${esc(k)}" aria-pressed="${done}" aria-label="Marcar ${esc(ins.nombre)} como comprado o pedido">${done ? "✓" : ""}</button>
               <button class="linkish grow" data-open="${esc(k)}" aria-expanded="${!!open}">
                 <div class="name">${esc(cap(ins.nombre))}</div>
                 ${ins.donde ? `<div class="sub">${esc(ins.donde)}</div>` : ""}
@@ -572,7 +572,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
               <span class="precio-line"><b>${esc(precioLabel(ins))}</b>${ins.fuente ? " · " + esc(ins.fuente) : ""}</span>
               <button class="btn ghost sm" data-precio="${esc(k)}" style="justify-self:start">Editar precio</button></div>` : ""}`; }).join("")}
           </div></section>`;
-      }).join("") || '<div class="card"><div class="empty">Ya tenés todo. Tocá <b>Todo</b> para ver la lista completa.</div></div>'}
+      }).join("") || '<div class="card"><div class="empty">¡Ya compraste o pediste todo! Tocá <b>Todo</b> para ver la lista completa.</div></div>'}
       <p class="note">Las cantidades se redondean para arriba (kg de a 100 g, unidades enteras) y el presupuesto se calcula con esas cantidades. Es estimativo: los precios son de referencia mayorista y pueden cambiar. Tocá un ingrediente para ver de qué platos sale, su precio y la fuente.</p>`;
     v.querySelectorAll("[data-precio]").forEach(b => b.onclick = () => precioSheet(b.dataset.precio));
     $("fFal").onclick = () => { S.faltan = true; render(); };
@@ -635,8 +635,9 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
     const n = equipoPersonas(e), d = equipoDias(e), sug = personasSugeridas(e), ok = e.utOk || {};
     const limp = Object.entries(S.insumos).filter(([k, i]) => Number(i.porCienDia) > 0).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, "es"));
     let costoLimp = 0;
-    const limpRows = limp.map(([k, ins]) => { const t = ins.porCienDia * n / 100 * d; const c = costoCompra(ins, t); costoLimp += c; return `
-      <div class="row"><button class="linkish grow" data-precio="${esc(k)}"><div class="name">${esc(cap(ins.nombre))}</div><div class="sub">${esc(nf(ins.porCienDia, 2))} por cada 100 personas por día · ${esc(precioLabel(ins))}</div></button>
+    const tengoL = e.tengo || {}; const limpOk = limp.filter(([k]) => tengoL[k]).length;
+    const limpRows = limp.map(([k, ins]) => { const t = ins.porCienDia * n / 100 * d; const c = costoCompra(ins, t); costoLimp += c; const hecho = !!tengoL[k]; return `
+      <div class="row${hecho ? " done" : ""}"><button class="check" data-tengo="${esc(k)}" aria-pressed="${hecho}" aria-label="Marcar ${esc(ins.nombre)} como comprado">${hecho ? "✓" : ""}</button><button class="linkish grow" data-precio="${esc(k)}"><div class="name">${esc(cap(ins.nombre))}</div><div class="sub">${esc(nf(ins.porCienDia, 2))} por cada 100 personas por día · ${esc(precioLabel(ins))}</div></button>
         <div class="qty">${esc(fmtQty(ins, t))}<div class="sub">${esc(money(c))}</div></div></div>`; }).join("");
     const ut = utensiliosOrden();
     const grupos = GRUPOS_UT.filter(g => ut.some(([id, u]) => u.grupo === g)).concat([...new Set(ut.map(([id, u]) => u.grupo))].filter(g => !GRUPOS_UT.includes(g)));
@@ -654,20 +655,20 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
       </section>
 
       <section class="group">
-        <div class="ghead"><span class="eyebrow">Limpieza y descartables</span><span class="note">${esc(money(costoLimp))}</span></div>
+        <div class="ghead"><span class="eyebrow">Limpieza y descartables</span><span class="note">${limpOk} de ${limp.length} comprados · ${esc(money(costoLimp))}</span></div>
         <div class="card">${limpRows || '<div class="empty">Sin artículos de limpieza cargados.</div>'}</div>
-        <p class="note">Se suman solos a la pestaña <b>Compras</b> y al presupuesto. Tocá un artículo para cambiarle el precio.</p>
+        <p class="note">Tildá cada artículo cuando lo compres o lo pidas: se marca igual en la pestaña <b>Compras</b>. Se suman solos al presupuesto. Tocá el nombre para cambiarle el precio.</p>
       </section>
 
       ${personalHtml(e)}
 
       <section class="group">
-        <div class="ghead"><span class="eyebrow">Utensilios para ${n} personas</span><span class="note">${faltan} por conseguir</span></div>
+        <div class="ghead"><span class="eyebrow">Utensilios para ${n} personas</span><span class="note">${ut.filter(([id, u]) => cantUtensilio(u, n) > 0).length - faltan} de ${ut.filter(([id, u]) => cantUtensilio(u, n) > 0).length} listos</span></div>
         ${grupos.map(g => `
           <div class="group"><span class="note"><b>${esc(g)}</b></span>
           <div class="card">${ut.filter(([id, u]) => u.grupo === g).map(([id, u]) => { const q = cantUtensilio(u, n), has = !!ok[id]; return `
             <div class="row${has ? " done" : ""}">
-              <button class="check" data-utok="${esc(id)}" aria-pressed="${has}" aria-label="Ya tengo ${esc(u.nombre)}">${has ? "✓" : ""}</button>
+              <button class="check" data-utok="${esc(id)}" aria-pressed="${has}" aria-label="Ya tengo ${esc(u.nombre)}" title="Tildá cuando lo tengas o lo consigas">${has ? "✓" : ""}</button>
               <button class="linkish grow" data-ut="${esc(id)}"><div class="name">${esc(u.nombre)}</div>${u.nota ? `<div class="sub">${esc(u.nota)}</div>` : ""}</button>
               <div class="qty" style="font-size:18px">${q}</div>
             </div>`; }).join("")}</div></div>`).join("")}
@@ -680,6 +681,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
     $("eqN").oninput = () => saveEq("personas", parseInt($("eqN").value, 10) || 1);
     $("eqD").oninput = () => saveEq("dias", parseInt($("eqD").value, 10) || 1);
     v.querySelectorAll("[data-precio]").forEach(b => b.onclick = () => precioSheet(b.dataset.precio));
+    v.querySelectorAll("[data-tengo]").forEach(b => b.onclick = () => { const k = b.dataset.tengo; e.tengo = e.tengo || {}; if (e.tengo[k]) delete e.tengo[k]; else e.tengo[k] = true; saveEvent(true); render(); });
     v.querySelectorAll("[data-utok]").forEach(b => b.onclick = () => { const id = b.dataset.utok; e.utOk = e.utOk || {}; if (e.utOk[id]) delete e.utOk[id]; else e.utOk[id] = true; saveEvent(true); render(); });
     v.querySelectorAll("[data-ut]").forEach(b => b.onclick = () => utensilioSheet(b.dataset.ut));
     v.querySelectorAll("[data-rolstep]").forEach(b => b.onclick = () => {
