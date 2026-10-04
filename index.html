@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#5b3a22">
+<meta name="description" content="TEAM C: recetario, menú, compras y presupuesto para la cocina de eventos.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="img/icono-192.png">
+<link rel="apple-touch-icon" href="img/icono-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TEAM C">
+<title>TEAM C</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: app de una columna para el celular — encabezado con el evento, contenido por pestaña, barra de pestañas fija abajo */
+:root{
+  --bg:#F7F2EC; --panel:#FFFFFF; --ink:#2A1C12; --muted:#6F5E50; --line:#E8DCCF;
+  --accent:#6B4226; --accent-ink:#FFFFFF; --accent-soft:#F3E7DC; --gold:#C98A2E;
+  --veg:#2E7D4F; --veg-soft:#E2F2E8; --meat:#B03A2E; --meat-soft:#F8E3E0;
+  --warn:#8A5A00; --warn-soft:#FBEFD2; --done:#8C8597;
+  --display:"Sora","Segoe UI",system-ui,sans-serif;
+  --body:"Nunito Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1A120C; --panel:#251A12; --ink:#F3E9DE; --muted:#B5A392; --line:#3D2D21;
+  --accent:#E0A15A; --accent-ink:#1A120C; --accent-soft:#3A2817; --gold:#F2B45A;
+  --veg:#6CC793; --veg-soft:#1B3326; --meat:#EE8B7F; --meat-soft:#3D2120;
+  --warn:#E8B95A; --warn-soft:#3A2E14; --done:#7C7488; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1A120C; --panel:#251A12; --ink:#F3E9DE; --muted:#B5A392; --line:#3D2D21;
+  --accent:#E0A15A; --accent-ink:#1A120C; --accent-soft:#3A2817; --gold:#F2B45A;
+  --veg:#6CC793; --veg-soft:#1B3326; --meat:#EE8B7F; --meat-soft:#3D2120;
+  --warn:#E8B95A; --warn-soft:#3A2E14; --done:#7C7488; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:16px calc(84px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:640px;margin:0 auto;display:grid;gap:16px}
+h1{font-family:var(--display);font-size:22px;margin:0;letter-spacing:-.01em}
+h2{font-family:var(--display);font-size:17px;margin:0;text-wrap:balance}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+.top{display:grid;gap:10px}
+.toprow{display:flex;gap:8px;align-items:center}
+.toprow select{flex:1;font-weight:700;font-size:16px}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;padding:10px 14px;font-weight:700;border:1px solid transparent;cursor:pointer;background:var(--accent);color:var(--accent-ink);white-space:nowrap}
+.btn.ghost{background:var(--panel);border-color:var(--line);color:var(--ink)}
+.btn.danger{background:transparent;border-color:var(--meat);color:var(--meat)}
+.btn.sm{padding:6px 10px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+.wrap > *{min-width:0}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.stat b{display:block;font-family:var(--display);font-size:clamp(13px,3.7vw,22px);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+.stat span{font-size:12px;color:var(--muted)}
+.group{display:grid;gap:8px}
+.ghead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.grow{flex:1;min-width:0}
+.name{font-weight:700;overflow-wrap:anywhere}
+.sub{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.pill{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;vertical-align:2px;margin-left:4px;text-transform:uppercase;letter-spacing:.04em}
+.pill.veggie{background:var(--veg-soft);color:var(--veg)}
+.pill.carne{background:var(--meat-soft);color:var(--meat)}
+.pill.general{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-shrink:0}
+.stepper button{border:0;background:transparent;width:36px;height:38px;font-size:20px;cursor:pointer;color:var(--accent)}
+.stepper input{width:56px;border:0;border-radius:0;text-align:center;padding:8px 0;font-family:var(--mono);font-size:16px;background:transparent}
+.qty{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.check{width:26px;height:26px;border-radius:8px;border:2px solid var(--line);background:transparent;cursor:pointer;flex-shrink:0;display:grid;place-items:center;color:var(--accent-ink);font-weight:700}
+.check[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+.row.done .name,.row.done .qty{color:var(--done);text-decoration:line-through}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.empty{padding:24px 16px;text-align:center;color:var(--muted)}
+.recwrap{border-top:1px solid var(--line)}
+.recwrap:first-child{border-top:0}
+.recwrap > .row{border-top:0}
+.ingtoggle{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:var(--accent);font-size:13px;font-weight:700;padding:0 14px 10px;cursor:pointer;width:100%;text-align:left}
+.ingtoggle .chev{display:inline-block;transition:transform .25s ease}
+.ingpanel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
+.ingpanel > div{overflow:hidden;min-height:0}
+.recwrap.open .ingpanel{grid-template-rows:1fr}
+.recwrap.open .ingtoggle .chev{transform:rotate(180deg)}
+@media (hover:hover){.recwrap:hover .ingpanel{grid-template-rows:1fr}.recwrap:hover .ingtoggle .chev{transform:rotate(180deg)}.recwrap:hover{background:var(--accent-soft)}}
+.inglist{list-style:none;margin:0;padding:0 14px 12px;display:grid;grid-template-columns:1fr;max-width:520px;font-size:14px}
+.inglist li{display:flex;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.inglist .in{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:1.6em;text-align:right}
+.inglist .nm{flex:1;min-width:0}
+.inglist .iq{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.ingpanel,.ingtoggle .chev{transition:none}}
+.note{font-size:13px;color:var(--muted)}
+.detail{padding:0 14px 12px 50px;font-size:13px;color:var(--muted);display:grid;gap:2px}
+.linkish{background:none;border:0;padding:0;text-align:left;cursor:pointer;width:100%}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
+nav.tabs .in{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;max-width:640px;width:100%}
+nav.tabs button{border:0;background:transparent;border-radius:12px;padding:8px 4px;cursor:pointer;color:var(--muted);font-weight:700;font-size:13px;display:grid;justify-items:center;gap:2px}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
+.sheet-bg{position:fixed;inset:0;background:rgba(10,6,16,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:14px}
+.field{display:grid;gap:6px}
+.field label{font-size:13px;font-weight:700;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ing{display:grid;grid-template-columns:1fr 92px 36px;gap:6px;align-items:start}
+.ing .unit{font-size:12px;color:var(--muted);padding:2px 2px 0}
+.ing .newi{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--warn-soft);border-radius:10px;padding:8px}
+.ing .newi p{grid-column:1/-1;margin:0;font-size:13px;color:var(--warn)}
+.x{border:0;background:transparent;font-size:22px;cursor:pointer;color:var(--muted);height:42px}
+.alert{border-radius:12px;padding:12px;display:grid;gap:8px;font-size:14px}
+.alert.err{background:var(--meat-soft);color:var(--meat)}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.delp{border:1px solid transparent;background:transparent;color:var(--muted);border-radius:10px;height:40px;min-width:40px;padding:0 8px;cursor:pointer;display:grid;place-items:center;flex-shrink:0;font-weight:700;font-size:13px}
+.delp svg{width:20px;height:20px}
+.delp.sure{background:var(--meat);color:var(--bg);border-color:var(--meat)}
+.toast .undo{background:transparent;border:0;color:var(--accent-soft);font-weight:700;text-decoration:underline;cursor:pointer;margin-left:6px}
+@media (max-width:420px){.row{gap:8px;padding:12px 10px}.stepper button{width:30px}.stepper input{width:46px}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;z-index:40;font-size:14px}
+@media (max-width:380px){.stats b{font-size:19px}.ing{grid-template-columns:1fr 80px 32px}}
+@media (prefers-reduced-motion:no-preference){.btn,.chip,.check{transition:background .15s,border-color .15s}}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{width:40px;height:40px;border-radius:10px}
+.brand h1{font-family:"Montserrat",var(--display);font-weight:800;letter-spacing:.04em}
+.brand h1 span{color:var(--gold)}
+.authbar{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.authbar .who{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ro{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px}
+html,body{margin:0}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="toprow">
+      <div class="brand"><img src="img/icono-192.png" alt=""><h1>TEAM <span>C</span></h1></div><div class="authbar" id="authbar"></div>
+    </div>
+    <div class="toprow">
+      <select id="evSel" aria-label="Evento"></select>
+      <a class="btn ghost sm" id="evLink" target="_blank" rel="noopener" title="Abrir este evento en otra pestaña" aria-label="Abrir este evento en otra pestaña">↗</a>
+      <button class="btn ghost sm" id="evNew">+ Evento</button>
+    </div>
+  </header>
+  <main id="view"><div class="empty">Cargando tu recetario…</div></main>
+</div>
+
+<nav class="tabs" aria-label="Secciones">
+  <div class="in">
+    <button data-tab="menu" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Menú</button>
+    <button data-tab="compras"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11h11l2-8H6.2"/><circle cx="9" cy="19.5" r="1.5"/><circle cx="17" cy="19.5" r="1.5"/></svg>Compras</button>
+    <button data-tab="equipo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11h16v3a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6z"/><path d="M2 11h20M9 7c0-1.5 1-2 1-3.5M14 7c0-1.5 1-2 1-3.5"/></svg>Equipo</button>
+    <button data-tab="recetas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg>Recetas</button>
+  </div>
+</nav>
+<div id="sheetRoot"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+  const CATS = ["Verduleria","Carnes","Lacteos","Almacen","Secos / Granos","Panaderia","Condimentos","Limpieza"];
+  const CAT_LABEL = {"Verduleria":"Verdulería","Carnes":"Carnes","Lacteos":"Lácteos","Almacen":"Almacén","Secos / Granos":"Secos y granos","Panaderia":"Panadería","Condimentos":"Condimentos y básicos","Limpieza":"Limpieza y descartables"};
+  const GRUPOS_UT = ["Cocción y gas","Ollas y sartenes","Preparación","Servicio","Guardado y agua","Higiene y seguridad","Equipo de cocina"];
+  const TIPOS = {veggie:"Veggie", carne:"Carne", general:"Para todos"};
+  const STOP = new Set(["de","con","y","la","el","los","las","al","a","en","para","p"]);
+  const $ = id => document.getElementById(id);
+  const S = { insumos:{}, recetas:{}, eventos:{}, utensilios:{}, config:{}, evId:null, tab:"menu", loaded:0, faltan:true, q:"", tipoF:"", open:{} };
+  let db = null;
+  try { S.tab = localStorage.getItem("cocina-tab") || "menu"; S.evId = localStorage.getItem("cocina-ev"); } catch(e){}
+  // cada evento tiene su propio link: la dirección de la app + "#" + el id del evento
+  const APP_URL = "https://clubdelacro1.github.io/team-c/";
+  const linkEvento = id => APP_URL + "#" + id;
+  const hashEv = () => { try { return decodeURIComponent((location.hash || "").slice(1)); } catch(e){ return ""; } };
+  if (hashEv()) { S.evId = hashEv(); S.tab = "menu"; }
+  window.addEventListener("hashchange", () => { if (hashEv() && S.eventos[hashEv()]) { S.evId = hashEv(); render(); } });
+
+  // ---------- utilidades ----------
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const slug = s => String(s||"").trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+  const nf = (n, d) => n.toLocaleString("es-AR", {maximumFractionDigits:d, minimumFractionDigits:0});
+  const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  function plural(w, n){ if (n === 1 || !w) return w; if (/[aeiouáéó]$/.test(w)) return w + "s"; if (/ón$/.test(w)) return w.replace(/ón$/,"ones"); return w + "es"; }
+  function fmtQty(ins, total){
+    if (!total) return "a criterio";
+    if (ins && ins.unidad === "u"){ const n = Math.max(1, Math.ceil(total - 1e-9)); return n + " " + plural(ins.etiqueta || "u.", n); }
+    if (total >= 1000) return nf(Math.ceil(total/100)/10, 1) + " " + uGrande(ins);
+    return nf(Math.ceil(total/10)*10, 0) + " " + uBase(ins);
+  }
+  // ---------- precios y presupuesto ----------
+  const uBase = ins => ins && ins.unidad === "ml" ? "ml" : "g";
+  const uGrande = ins => ins && ins.unidad === "ml" ? "L" : "kg";
+  const uPrecio = ins => ins && ins.unidad === "u" ? (ins.etiqueta || "unidad") : ins && ins.unidad === "ml" ? "litro" : "kg";
+  const money = n => "$" + Math.round(n).toLocaleString("es-AR");
+  const tienePrecio = ins => ins && Number(ins.precio) > 0;
+  // costo de compra: con las cantidades redondeadas como en la lista (kg de a 100 g, unidades enteras)
+  function costoCompra(ins, total){
+    if (!tienePrecio(ins) || !total) return 0;
+    if (ins.unidad === "u") return Math.max(1, Math.ceil(total - 1e-9)) * ins.precio;
+    return Math.ceil(total/100)/10 * ins.precio;
+  }
+  // costo teórico de una cantidad exacta (para el costo por persona de cada plato)
+  function costoExacto(ins, cant){ if (!tienePrecio(ins)) return 0; return ins.unidad === "u" ? cant * ins.precio : cant / 1000 * ins.precio; }
+  function costoReceta(r){ let s = 0, falta = 0; (r?.items || []).forEach(it => { const ins = S.insumos[it.insumo]; if (it.cant && !tienePrecio(ins)) falta++; s += costoExacto(ins, Number(it.cant) || 0); }); return { s, falta }; }
+  function presupuesto(e, soloFalta){
+    const tot = compute(e), tengo = e?.tengo || {}; let s = 0, sin = 0;
+    Object.keys(tot).forEach(k => { if (soloFalta && tengo[k]) return; const ins = S.insumos[k]; if (tot[k].total && !tienePrecio(ins)) sin++; s += costoCompra(ins, tot[k].total); });
+    return { s, sin };
+  }
+  const precioLabel = ins => tienePrecio(ins) ? money(ins.precio) + (" por " + uPrecio(ins)) : "sin precio";
+
+  function fmtPorcion(ins, cant){
+    if (!cant) return "falta gramaje";
+    if (ins && ins.unidad === "u") return nf(cant, 3) + " " + plural(ins.etiqueta || "u.", cant) + " por persona";
+    return nf(cant, 1) + " " + uBase(ins) + " por persona";
+  }
+  function undoToast(msg, undo){
+    document.querySelectorAll(".toast").forEach(t => t.remove());
+    const t = document.createElement("div"); t.className = "toast";
+    t.innerHTML = `<span>${esc(msg)}</span> <button class="undo">Deshacer</button>`;
+    t.querySelector(".undo").onclick = () => { t.remove(); undo(); };
+    document.body.appendChild(t); setTimeout(() => t.remove(), 5000);
+  }
+  function toast(msg){ const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2200); }
+  function tokens(name){ return new Set(slug(name).split("-").filter(w => w && !STOP.has(w))); }
+  function jaccard(a, b){ if (!a.size && !b.size) return 0; let i = 0; a.forEach(x => { if (b.has(x)) i++; }); return i / (a.size + b.size - i); }
+  function lev(a, b){ const m = a.length, n = b.length; if (!m) return n; if (!n) return m; let p = Array.from({length:n+1}, (_, j) => j); for (let i = 1; i <= m; i++){ const c = [i]; for (let j = 1; j <= n; j++) c[j] = Math.min(p[j]+1, c[j-1]+1, p[j-1] + (a[i-1] === b[j-1] ? 0 : 1)); p = c; } return p[n]; }
+  const ev = () => S.eventos[S.evId];
+  const recetasOrden = () => Object.entries(S.recetas).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, "es"));
+
+  // ---------- cálculo de compras ----------
+  function compute(e){
+    const out = {};
+    (e?.platos || []).forEach(p => {
+      const r = S.recetas[p.receta]; if (!r) return;
+      (r.items || []).forEach(it => {
+        const o = out[it.insumo] || (out[it.insumo] = {total:0, por:[]});
+        const c = (Number(it.cant) || 0) * (Number(p.personas) || 0);
+        o.total += c; o.por.push({plato:r.nombre, comida:p.comida, c});
+      });
+    });
+    // limpieza y descartables: se calcula por cada 100 personas y por día
+    if ((e?.platos || []).length){
+      const n = equipoPersonas(e), d = equipoDias(e);
+      Object.entries(S.insumos).forEach(([k, ins]) => {
+        const rate = Number(ins.porCienDia) || 0; if (!rate) return;
+        const c = rate * n / 100 * d;
+        const o = out[k] || (out[k] = {total:0, por:[]});
+        o.total += c; o.por.push({plato:"Limpieza y descartables", comida:`${n} personas · ${d} ${d === 1 ? "día" : "días"}`, c});
+      });
+    }
+    return out;
+  }
+
+  // ---------- equipo: personas, días y utensilios ----------
+  function personasSugeridas(e){
+    const g = {};
+    (e?.platos || []).forEach(p => { if (/todos/i.test(p.comida || "")) return; g[p.comida || ""] = (g[p.comida || ""] || 0) + (Number(p.personas) || 0); });
+    const m = Math.max(0, ...Object.values(g));
+    return m || 50;
+  }
+  const equipoPersonas = e => Number(e?.equipo?.personas) || personasSugeridas(e);
+  const equipoDias = e => Number(e?.equipo?.dias) || 3;
+  function cantUtensilio(u, n){
+    const a = Number(u.por50) || 0, b = Number(u.por100) || 0, c = Number(u.por200) || 0;
+    if (n <= 50) return a; if (n <= 100) return b; if (n <= 200) return c;
+    return Math.ceil(c * n / 200);
+  }
+  // ---------- personal: pago por hora y por servicio ----------
+  const PERSONAL_DEF = {
+    horas: { desayuno: 3, almuerzo: 5.5, cena: 5.5 },
+    roles: [
+      { id:"jefe", nombre:"Jefe/a de cocina", tarifa:9000, fuente:"Estimado: no hay escala UTHGRA aparte; cocinero categoría especial ($7.624/h) + 20% por responsabilidad" },
+      { id:"cocinero", nombre:"Cocinero/a", tarifa:6460, fuente:"UTHGRA nivel 6, vigente 1/7 al 30/9/2026 ($1.292.026 / 200 h)" },
+      { id:"ayudante", nombre:"Ayudante de cocina", tarifa:5496, fuente:"UTHGRA nivel 3, vigente 1/7 al 30/9/2026 ($1.099.139 / 200 h)" },
+      { id:"bachero", nombre:"Bachero/a (lavado)", tarifa:4953, fuente:"UTHGRA nivel 1, vigente 1/7 al 30/9/2026 ($990.555 / 200 h)" }
+    ]
+  };
+  const TIPOS_SERV = { desayuno:"Desayunos", almuerzo:"Almuerzos", cena:"Cenas" };
+  function personalCfg(){
+    const c = S.config.personal || {};
+    return { horas: Object.assign({}, PERSONAL_DEF.horas, c.horas || {}), roles: (c.roles && c.roles.length) ? c.roles : PERSONAL_DEF.roles };
+  }
+  // cuenta los servicios del menú: cada "comida" distinta es un servicio; "desayunos todos los días" cuenta uno por día
+  function servicios(e){
+    const out = { desayuno:0, almuerzo:0, cena:0 }, vistos = {};
+    (e?.platos || []).forEach(p => {
+      const k = (p.comida || "").trim().toLowerCase(); if (vistos[k]) return; vistos[k] = 1;
+      const r = S.recetas[p.receta];
+      let t = /desayun/.test(k) ? "desayuno" : /almuerz/.test(k) ? "almuerzo" : /cena/.test(k) ? "cena" : (r && r.turno === "Desayuno") ? "desayuno" : (r && r.turno === "Almuerzo") ? "almuerzo" : "cena";
+      out[t] += (t === "desayuno" && /todos/.test(k)) ? equipoDias(e) : 1;
+    });
+    return out;
+  }
+  function personalDefecto(id, n){
+    if (id === "jefe") return 1;
+    if (id === "cocinero") return n <= 50 ? 1 : n <= 100 ? 2 : n <= 200 ? 3 : Math.ceil(n / 70);
+    return 0;
+  }
+  const personalCant = (e, id) => { const v = e?.personal?.cant?.[id]; return v == null ? personalDefecto(id, equipoPersonas(e)) : Number(v) || 0; };
+  function horasEvento(e){ const s = servicios(e), h = personalCfg().horas; return s.desayuno * h.desayuno + s.almuerzo * h.almuerzo + s.cena * h.cena; }
+  function costoPersonal(e){ if (!(e?.platos || []).length) return 0; const hs = horasEvento(e); return personalCfg().roles.reduce((s, r) => s + personalCant(e, r.id) * (Number(r.tarifa) || 0) * hs, 0); }
+
+  const utensiliosOrden = () => Object.entries(S.utensilios).sort((x, y) => (GRUPOS_UT.indexOf(x[1].grupo) - GRUPOS_UT.indexOf(y[1].grupo)) || ((x[1].orden || 0) - (y[1].orden || 0)) || x[1].nombre.localeCompare(y[1].nombre, "es"));
+
+  // ---------- guardar evento (con espera para no escribir en cada toque) ----------
+  let saveTimer = null, saving = Promise.resolve(), pendiente = false;
+  function saveEvent(now){
+    const id = S.evId, e = ev(); if (!db || !e) return;
+    clearTimeout(saveTimer);
+    const run = () => { saveTimer = null; pendiente = true; const body = JSON.parse(JSON.stringify(S.eventos[id])); saving = saving.then(() => db.collection("eventos").doc(id).set(body)).catch(() => toast("No se pudo guardar. Revisá la conexión.")).finally(() => { pendiente = false; }); };
+    if (now) run(); else saveTimer = setTimeout(run, 700);
+  }
+
+  // ---------- render ----------
+  function render(){
+    document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === S.tab ? "page" : "false"));
+    renderEvSel();
+    const v = $("view");
+    if (!db){ v.innerHTML = '<div class="empty">No se pudo conectar con la base de datos. Revisá tu conexión y recargá.</div>'; return; }
+    if (S.loaded < 5){ v.innerHTML = '<div class="empty">Cargando tu recetario…</div>'; return; }
+    if (S.tab === "menu") renderMenu(v); else if (S.tab === "compras") renderCompras(v); else if (S.tab === "equipo") renderEquipo(v); else renderRecetas(v);
+    v.querySelectorAll(".xlsBtn").forEach(b => { b.hidden = !downloads || !window.XLSX; b.onclick = exportXlsx; });
+  }
+
+  // ---------- descargar todo en Excel ----------
+  let downloads = null;
+  function cantCompra(ins, total){
+    if (!total) return { n:"", u:"a criterio" };
+    if (ins && ins.unidad === "u"){ const n = Math.max(1, Math.ceil(total - 1e-9)); return { n, u: plural(ins.etiqueta || "unidad", n) }; }
+    return { n: Math.ceil(total/100)/10, u: uGrande(ins) };
+  }
+  // ---------- Excel para cocineros: recetas finales con cantidades, sin precios ----------
+  function cantCocina(ins, total){
+    if (!total) return "a criterio";
+    if (ins && ins.unidad === "u"){ const n = Math.round(total * 10) / 10; return nf(n, 1) + " " + plural(ins.etiqueta || "unidad", n); }
+    if (total >= 1000) return nf(Math.round(total / 10) / 100, 2) + " " + uGrande(ins);
+    return nf(Math.round(total), 0) + " " + uBase(ins);
+  }
+  function porPersonaCocina(ins, c){
+    if (!c) return "a criterio";
+    if (ins && ins.unidad === "u") return nf(c, 3) + " " + plural(ins.etiqueta || "unidad", c);
+    return nf(c, c < 1 ? 2 : 1) + " " + uBase(ins);
+  }
+  async function exportCocina(){
+    const X = window.XLSX, e = ev(); if (!X || !downloads || !e) return;
+    const wb = X.utils.book_new();
+    const add = (name, rows, widths) => { const ws = X.utils.aoa_to_sheet(rows); ws["!cols"] = widths.map(w => ({wch:w})); X.utils.book_append_sheet(wb, ws, name); };
+    const platos = e.platos || [];
+    // resumen del menú
+    const res = [[e.nombre.toUpperCase() + " · MENÚ"], [], ["Comida", "Plato", "Tipo", "Personas"]];
+    platos.forEach(p => { const r = S.recetas[p.receta]; res.push([p.comida || "", r ? r.nombre : "Receta borrada", r ? TIPOS[r.tipo] || "" : "", Number(p.personas) || 0]); });
+    res.push([], ["Total de porciones", "", "", platos.reduce((s, p) => s + (Number(p.personas) || 0), 0)]);
+    add("Menú", res, [26, 44, 12, 10]);
+    // cada plato con su receta final
+    const rows = [[e.nombre.toUpperCase() + " · RECETAS PARA LA COCINA"], ["Cantidades totales para las personas de cada plato. Las de \"por persona\" sirven para armar porciones."], []];
+    const grupos = [];
+    platos.forEach(p => { let g = grupos.find(x => x.k === p.comida); if (!g){ g = { k: p.comida, items: [] }; grupos.push(g); } g.items.push(p); });
+    grupos.forEach(g => {
+      rows.push([(g.k || "Sin comida asignada").toUpperCase()]);
+      g.items.forEach(p => {
+        const r = S.recetas[p.receta]; if (!r) return; const n = Number(p.personas) || 0;
+        rows.push([r.nombre + " (" + (TIPOS[r.tipo] || "") + ") · " + n + " personas"]);
+        rows.push(["#", "Ingrediente", "Cantidad total", "Por persona"]);
+        (r.items || []).forEach((it, i) => { const ins = S.insumos[it.insumo] || { nombre: it.insumo }; const c = Number(it.cant) || 0; rows.push([i + 1, cap(ins.nombre), cantCocina(ins, c * n), porPersonaCocina(ins, c)]); });
+        rows.push([]);
+      });
+      rows.push([]);
+    });
+    add("Recetas", rows, [6, 34, 18, 18]);
+    // una hoja por comida, para imprimir o pasar por partes
+    grupos.forEach((g, gi) => {
+      const hoja = [[(g.k || "Sin comida asignada").toUpperCase()], []];
+      g.items.forEach(p => {
+        const r = S.recetas[p.receta]; if (!r) return; const n = Number(p.personas) || 0;
+        hoja.push([r.nombre + " · " + n + " personas"], ["#", "Ingrediente", "Cantidad total", "Por persona"]);
+        (r.items || []).forEach((it, i) => { const ins = S.insumos[it.insumo] || { nombre: it.insumo }; const c = Number(it.cant) || 0; hoja.push([i + 1, cap(ins.nombre), cantCocina(ins, c * n), porPersonaCocina(ins, c)]); });
+        hoja.push([]);
+      });
+      const nom = ((gi + 1) + " " + (g.k || "comida")).replace(/[\\\/\?\*\[\]:]/g, " ").slice(0, 31);
+      add(nom, hoja, [6, 34, 18, 18]);
+    });
+    const out = X.write(wb, { bookType: "xlsx", type: "array" });
+    try { await downloads.save({ filename: "recetas-cocina-" + slug(e.nombre) + ".xlsx", data: new Blob([out]) }); }
+    catch(err){ if (err && err.code !== "declined") toast("No se pudo descargar. Probá de nuevo."); }
+  }
+
+  async function exportXlsx(){
+    const X = window.XLSX; if (!X || !downloads) return;
+    const wb = X.utils.book_new();
+    const add = (name, rows, widths) => { const ws = X.utils.aoa_to_sheet(rows); ws["!cols"] = widths.map(w => ({wch:w})); X.utils.book_append_sheet(wb, ws, name); };
+    const e = ev();
+    if (e){
+      const tot = compute(e), tengo = e.tengo || {};
+      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde","Ya tengo","Precio","Precio por","Costo estimado","Fuente del precio"]];
+      let totalCosto = 0;
+      Object.keys(tot).sort((a, b) => { const ia = S.insumos[a] || {}, ib = S.insumos[b] || {}; return (CATS.indexOf(ia.categoria) - CATS.indexOf(ib.categoria)) || (ia.nombre || a).localeCompare(ib.nombre || b, "es"); })
+        .forEach(k => { const ins = S.insumos[k] || {nombre:k}; const q = cantCompra(ins, tot[k].total); const c = Math.round(costoCompra(ins, tot[k].total)); totalCosto += c;
+          compras.push([CAT_LABEL[ins.categoria] || "", cap(ins.nombre), q.n, q.u, ins.donde || "", tengo[k] ? "sí" : "", tienePrecio(ins) ? ins.precio : "", tienePrecio(ins) ? uPrecio(ins) : "", tienePrecio(ins) ? c : "sin precio", ins.fuente || ""]); });
+      compras.push([], ["", "PRESUPUESTO TOTAL", "", "", "", "", "", "", totalCosto, ""]);
+      add("Compras", compras, [16,30,10,12,14,9,10,10,14,50]);
+      const menu = [["Comida","Plato","Tipo","Personas","Costo por persona","Costo total"]];
+      (e.platos||[]).forEach(p => { const r = S.recetas[p.receta]; const cp = r ? Math.round(costoReceta(r).s) : 0; menu.push([p.comida || "", r ? r.nombre : "Receta borrada", r ? TIPOS[r.tipo] || "" : "", Number(p.personas)||0, cp, cp * (Number(p.personas)||0)]); });
+      add("Menú", menu, [24,38,12,10,16,14]);
+      const nUt = equipoPersonas(e), utOk = e.utOk || {};
+      const ut = [["Grupo","Utensilio","Cantidad para " + nUt + " personas","Lo tengo","Nota"]];
+      utensiliosOrden().forEach(([id, u]) => ut.push([u.grupo || "", u.nombre, cantUtensilio(u, nUt), utOk[id] ? "sí" : "", u.nota || ""]));
+      add("Utensilios", ut, [16,34,14,9,50]);
+      const cfgP = personalCfg(), sv = servicios(e), hsP = horasEvento(e);
+      const per = [["Rol","Cantidad","Pago por hora","Horas por persona","Total","Fuente"]];
+      cfgP.roles.forEach(r => { const c = personalCant(e, r.id); per.push([r.nombre, c, Number(r.tarifa) || 0, hsP, Math.round(c * (Number(r.tarifa) || 0) * hsP), r.fuente || ""]); });
+      per.push([], ["Servicios", Object.keys(TIPOS_SERV).map(t => `${sv[t]} ${TIPOS_SERV[t].toLowerCase()} de ${cfgP.horas[t]} h`).join(", ")], ["TOTAL PERSONAL", "", "", "", Math.round(costoPersonal(e)), ""]);
+      add("Personal", per, [24,10,14,16,14,70]);
+      const det = [["Comida","Plato","Personas","Ingrediente","Por persona","Unidad","Total","Unidad total"]];
+      (e.platos||[]).forEach(p => { const r = S.recetas[p.receta]; if (!r) return; (r.items||[]).forEach(it => { const ins = S.insumos[it.insumo] || {nombre:it.insumo}; const u = ins.unidad === "u"; const t = (Number(it.cant)||0) * (Number(p.personas)||0); det.push([p.comida || "", r.nombre, Number(p.personas)||0, cap(ins.nombre), Number(it.cant)||0, u ? (ins.etiqueta || "unidad") : uBase(ins), u ? Math.round(t*100)/100 : Math.round(t)/1000, u ? (ins.etiqueta || "unidad") : uGrande(ins)]); }); });
+      add("Detalle por plato", det, [24,38,10,28,12,10,10,12]);
+    }
+    const rec = [["Receta","Tipo","Turno","Ingrediente","Categoría","Por persona","Unidad","Costo por persona","Para revisar"]];
+    recetasOrden().forEach(([id, r]) => (r.items||[]).forEach((it, i) => { const ins = S.insumos[it.insumo] || {nombre:it.insumo}; rec.push([r.nombre, TIPOS[r.tipo] || "", r.turno || "", cap(ins.nombre), CAT_LABEL[ins.categoria] || "", Number(it.cant)||0, ins.unidad === "u" ? (ins.etiqueta || "unidad") : uBase(ins), i === 0 ? Math.round(costoReceta(r).s) : "", i === 0 ? (r.revisar || "") : ""]); }));
+    add("Recetas", rec, [36,12,10,28,16,12,10,16,50]);
+    const pr = [["Ingrediente","Categoría","Precio","Precio por","Fuente","Fecha"]];
+    Object.entries(S.insumos).sort((a, b) => (a[1].nombre || "").localeCompare(b[1].nombre || "", "es")).forEach(([k, ins]) => pr.push([cap(ins.nombre), CAT_LABEL[ins.categoria] || ins.categoria || "", tienePrecio(ins) ? ins.precio : "", uPrecio(ins), ins.fuente || "", ins.fechaPrecio || ""]));
+    add("Precios", pr, [30,18,12,12,60,12]);
+    const out = X.write(wb, { bookType:"xlsx", type:"array" });
+    const name = "cocina-" + (e ? slug(e.nombre) : "recetario") + ".xlsx";
+    try { await downloads.save({ filename:name, data:new Blob([out], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }) }); }
+    catch(err){ if (err && err.code !== "cancelled" && err.code !== "declined") toast("No se pudo descargar. Probá de nuevo."); }
+  }
+
+  function renderEvSel(){
+    const sel = $("evSel");
+    const ids = Object.keys(S.eventos).sort((a, b) => (S.eventos[b].creado || "").localeCompare(S.eventos[a].creado || ""));
+    if (ids.length && (!S.evId || !S.eventos[S.evId])) S.evId = ids[0];
+    sel.innerHTML = ids.length ? ids.map(id => `<option value="${esc(id)}"${id === S.evId ? " selected" : ""}>${esc(S.eventos[id].nombre)}</option>`).join("") : '<option>Sin eventos todavía</option>';
+    sel.disabled = !ids.length;
+    const lk = $("evLink"); lk.hidden = !S.evId; if (S.evId) lk.href = linkEvento(S.evId);
+  }
+
+  function renderMenu(v){
+    const e = ev();
+    if (!e){ v.innerHTML = '<div class="empty">Creá tu primer evento con <b>+ Evento</b> para armar el menú.</div>'; return; }
+    const platos = e.platos || [];
+    const totalPers = platos.reduce((s, p) => s + (Number(p.personas) || 0), 0);
+    const nIng = Object.values(compute(e)).filter(o => o.total > 0).length;
+    const groups = [];
+    platos.forEach(p => { let g = groups.find(x => x.k === p.comida); if (!g){ g = {k:p.comida, items:[]}; groups.push(g); } g.items.push(p); });
+    v.innerHTML = `
+      <div class="group">
+        <div class="stats">
+          <div class="stat"><b>${platos.length}</b><span>platos</span></div>
+          <div class="stat"><b>${nf(totalPers,0)}</b><span>porciones</span></div>
+          <div class="stat"><b>${money(presupuesto(e).s + costoPersonal(e))}</b><span>presupuesto total</span></div>
+        </div>
+        <p class="note" id="presuNote">${presuNote(e, nIng)}</p>
+        ${e.nota ? `<p class="note">${esc(e.nota)}</p>` : ""}
+      </div>
+      ${groups.length ? groups.map(g => `
+        <section class="group">
+          <div class="ghead"><span class="eyebrow">${esc(g.k || "Sin comida asignada")}</span></div>
+          <div class="card">${g.items.map(p => { const r = S.recetas[p.receta]; return `
+            <div class="recwrap">
+            <div class="row">
+              <button class="linkish grow" data-edit="${esc(p.id)}">
+                <div class="name">${esc(r ? r.nombre : "Receta borrada")}${r ? `<span class="pill ${r.tipo}">${TIPOS[r.tipo] || ""}</span>` : ""}</div>
+                <div class="sub" id="sub-${esc(p.id)}">${r ? platoSub(r, p) : "Elegí otra receta"}</div>
+              </button>
+              <div class="stepper" role="group" aria-label="Personas para ${esc(r ? r.nombre : "")}">
+                <button data-step="${esc(p.id)}" data-d="-1" aria-label="Una persona menos">−</button>
+                <input type="number" inputmode="numeric" min="0" id="pers-${esc(p.id)}" data-pers="${esc(p.id)}" value="${Number(p.personas)||0}" aria-label="Personas">
+                <button data-step="${esc(p.id)}" data-d="1" aria-label="Una persona más">+</button>
+              </div>
+              <button class="delp" data-delp="${esc(p.id)}" aria-label="Quitar ${esc(r ? r.nombre : "plato")} del menú">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
+              </button>
+            </div>
+            ${r ? ingPanel(r, Number(p.personas) || 0, "ing-" + p.id) : ""}
+            </div>`; }).join("")}
+          </div>
+        </section>`).join("") : '<div class="card"><div class="empty">Todavía no hay platos. Agregá el primero y poné cuántas personas comen.</div></div>'}
+      <div class="actions" style="justify-content:stretch"><button class="btn" id="addPlato" style="flex:1">+ Agregar plato</button></div>
+      ${platos.length ? `<section class="card" style="padding:14px;display:grid;gap:8px">
+        <div class="name">Recetas para la cocina</div>
+        <p class="note" style="margin:0">Un Excel para pasarles a los cocineros: cada plato con sus ingredientes y las cantidades finales para las personas cargadas. Sin precios.</p>
+        <button class="btn" id="xlsCocina" style="justify-self:start">Descargar Excel para cocineros</button>
+      </section>` : ""}
+      <div class="actions"><button class="btn ghost sm" id="evEdit">Renombrar o borrar evento</button></div>`;
+    v.className = "group";
+    $("addPlato").onclick = () => platoSheet(null);
+    $("evEdit").onclick = eventSheet;
+    const xc = $("xlsCocina"); if (xc){ xc.hidden = !downloads || !window.XLSX; xc.onclick = exportCocina; }
+    v.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => platoSheet(b.dataset.edit));
+    v.querySelectorAll("[data-step]").forEach(b => b.onclick = () => {
+      const p = e.platos.find(x => x.id === b.dataset.step); if (!p) return;
+      p.personas = Math.max(0, (Number(p.personas)||0) + Number(b.dataset.d));
+      $("pers-" + p.id).value = p.personas; saveEvent(); refreshStats();
+    });
+    v.querySelectorAll("[data-delp]").forEach(b => b.onclick = () => {
+      const p = e.platos.find(x => x.id === b.dataset.delp); if (!p) return;
+      if (!b.classList.contains("sure")){
+        v.querySelectorAll(".delp.sure").forEach(o => { o.classList.remove("sure"); o.innerHTML = o.dataset.icon; });
+        b.dataset.icon = b.innerHTML; b.classList.add("sure"); b.textContent = "¿Quitar?";
+        clearTimeout(b._t); b._t = setTimeout(() => { if (b.isConnected && b.classList.contains("sure")){ b.classList.remove("sure"); b.innerHTML = b.dataset.icon; } }, 3500);
+        return;
+      }
+      const idx = e.platos.indexOf(p);
+      e.platos.splice(idx, 1); saveEvent(true); render();
+      undoToast("Plato quitado", () => { e.platos.splice(Math.min(idx, e.platos.length), 0, p); saveEvent(true); render(); });
+    });
+    v.querySelectorAll("[data-pers]").forEach(inp => inp.oninput = () => {
+      const p = e.platos.find(x => x.id === inp.dataset.pers); if (!p) return;
+      p.personas = Math.max(0, parseInt(inp.value, 10) || 0); saveEvent(); refreshStats();
+    });
+  }
+  // lista desplegable de ingredientes: se abre al pasar el mouse (o tocando "Ver ingredientes" en el celu)
+  function ingItems(r, personas){
+    return (r.items || []).map((it, i) => { const ins = S.insumos[it.insumo] || {nombre:it.insumo}; const c = Number(it.cant) || 0;
+      const q = !c ? "a criterio" : personas ? fmtQty(ins, c * personas) : (ins.unidad === "u" ? nf(c, 3) + " " + plural(ins.etiqueta || "u.", c) : nf(c, 1) + " " + uBase(ins));
+      return `<li><span class="in">${i + 1}</span><span class="nm">${esc(cap(ins.nombre))}</span><span class="iq">${esc(q)}</span></li>`; }).join("");
+  }
+  function ingPanel(r, personas, id){
+    const n = (r.items || []).length;
+    return `<button class="ingtoggle" aria-expanded="false"><span>${n} ingredientes${personas ? " para " + personas + " personas" : " por persona"}</span><span class="chev" aria-hidden="true">▾</span></button>
+      <div class="ingpanel"><div><ul class="inglist"${id ? ` id="${esc(id)}"` : ""}>${ingItems(r, personas)}</ul></div></div>`;
+  }
+  document.addEventListener("click", ev3 => {
+    const t = ev3.target.closest(".ingtoggle"); if (!t) return;
+    const w = t.closest(".recwrap"); const open = !w.classList.contains("open");
+    w.classList.toggle("open", open); t.setAttribute("aria-expanded", open);
+  });
+
+  function presuNote(e, nIng){
+    return esc(`Compras ${money(presupuesto(e).s)} (${nIng} ingredientes y limpieza) + personal ${money(costoPersonal(e))}`);
+  }
+  function platoSub(r, p){
+    const c = costoReceta(r);
+    return esc(`${money(c.s)} por persona · ${money(c.s * (Number(p.personas)||0))} en total`);
+  }
+  function refreshStats(){
+    const e = ev(); const st = document.querySelectorAll(".stat b"); if (!e || st.length < 3) return;
+    st[1].textContent = nf(e.platos.reduce((s, p) => s + (Number(p.personas)||0), 0), 0);
+    st[2].textContent = money(presupuesto(e).s + costoPersonal(e));
+    const pn = $("presuNote"); if (pn) pn.innerHTML = presuNote(e, Object.values(compute(e)).filter(o => o.total > 0).length);
+    e.platos.forEach(p => { const el = $("sub-" + p.id), r = S.recetas[p.receta]; if (el && r) el.innerHTML = platoSub(r, p);
+      const li = $("ing-" + p.id); if (li && r){ li.innerHTML = ingItems(r, Number(p.personas) || 0); const tg = li.closest(".recwrap").querySelector(".ingtoggle span"); if (tg) tg.textContent = (r.items||[]).length + " ingredientes para " + (Number(p.personas)||0) + " personas"; } });
+  }
+
+  function renderCompras(v){
+    const e = ev();
+    if (!e){ v.innerHTML = '<div class="empty">Creá un evento y armá su menú para ver qué comprar.</div>'; return; }
+    const tot = compute(e), tengo = e.tengo || {};
+    const keys = Object.keys(tot);
+    if (!keys.length){ v.innerHTML = '<div class="card"><div class="empty">El menú está vacío. Agregá platos en <b>Menú</b> y acá aparece la lista de compras.</div></div>'; v.className = "group"; return; }
+    const byCat = {};
+    keys.forEach(k => { const ins = S.insumos[k] || {nombre:k, categoria:"Almacen", unidad:"g"}; const c = CATS.includes(ins.categoria) ? ins.categoria : "Almacen"; (byCat[c] = byCat[c] || []).push(k); });
+    const pend = keys.filter(k => !tengo[k]).length;
+    const pTot = presupuesto(e), pFal = presupuesto(e, true);
+    v.className = "group";
+    v.innerHTML = `
+      <div class="stats">
+        <div class="stat"><b>${money(pTot.s)}</b><span>presupuesto total</span></div>
+        <div class="stat"><b>${money(pFal.s)}</b><span>falta comprar (${pend})</span></div>
+        <div class="stat"><b>${keys.length - pend}</b><span>ya tengo</span></div>
+      </div>
+      ${pTot.sin ? `<p class="note"><span class="pill warn">${pTot.sin} sin precio</span> no suman al presupuesto. Tocá el ingrediente y cargale el precio.</p>` : ""}
+      <div class="ghead">
+        <div class="chips">
+          <button class="chip" id="fFal" aria-pressed="${S.faltan}">Me falta</button>
+          <button class="chip" id="fTod" aria-pressed="${!S.faltan}">Todo</button>
+        </div>
+        <div class="chips"><button class="btn ghost sm" id="copy">Copiar lista</button><button class="btn ghost sm xlsBtn">Descargar Excel</button></div>
+      </div>
+      ${CATS.filter(c => byCat[c]).map(c => {
+        const list = byCat[c].filter(k => !S.faltan || !tengo[k]).sort((a, b) => (S.insumos[a]?.nombre || a).localeCompare(S.insumos[b]?.nombre || b, "es"));
+        if (!list.length) return "";
+        const sub = list.reduce((s, k) => s + costoCompra(S.insumos[k], tot[k].total), 0);
+        return `<section class="group"><div class="ghead"><span class="eyebrow">${CAT_LABEL[c]}</span><span class="note">${list.length} · ${money(sub)}</span></div>
+          <div class="card">${list.map(k => { const ins = S.insumos[k] || {nombre:k}; const o = tot[k]; const done = !!tengo[k]; const open = S.open[k]; return `
+            <div class="row${done ? " done" : ""}">
+              <button class="check" data-tengo="${esc(k)}" aria-pressed="${done}" aria-label="Ya tengo ${esc(ins.nombre)}">${done ? "✓" : ""}</button>
+              <button class="linkish grow" data-open="${esc(k)}" aria-expanded="${!!open}">
+                <div class="name">${esc(cap(ins.nombre))}</div>
+                ${ins.donde ? `<div class="sub">${esc(ins.donde)}</div>` : ""}
+              </button>
+              <div class="qty">${o.total ? esc(fmtQty(ins, o.total)) : '<span class="pill warn">a criterio</span>'}${o.total ? `<div class="sub">${tienePrecio(ins) ? esc(money(costoCompra(ins, o.total))) : '<span class="pill warn">sin precio</span>'}</div>` : ""}</div>
+            </div>
+            ${open ? `<div class="detail">${o.por.map(x => `<span>${esc(x.comida || "")} · ${esc(x.plato)}: ${x.c ? esc(fmtQty(ins, x.c)) : "sin gramaje"}</span>`).join("")}
+              <span class="precio-line"><b>${esc(precioLabel(ins))}</b>${ins.fuente ? " · " + esc(ins.fuente) : ""}</span>
+              <button class="btn ghost sm" data-precio="${esc(k)}" style="justify-self:start">Editar precio</button></div>` : ""}`; }).join("")}
+          </div></section>`;
+      }).join("") || '<div class="card"><div class="empty">Ya tenés todo. Tocá <b>Todo</b> para ver la lista completa.</div></div>'}
+      <p class="note">Las cantidades se redondean para arriba (kg de a 100 g, unidades enteras) y el presupuesto se calcula con esas cantidades. Es estimativo: los precios son de referencia mayorista y pueden cambiar. Tocá un ingrediente para ver de qué platos sale, su precio y la fuente.</p>`;
+    v.querySelectorAll("[data-precio]").forEach(b => b.onclick = () => precioSheet(b.dataset.precio));
+    $("fFal").onclick = () => { S.faltan = true; render(); };
+    $("fTod").onclick = () => { S.faltan = false; render(); };
+    v.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { S.open[b.dataset.open] = !S.open[b.dataset.open]; render(); });
+    v.querySelectorAll("[data-tengo]").forEach(b => b.onclick = () => {
+      const k = b.dataset.tengo; e.tengo = e.tengo || {};
+      if (e.tengo[k]) delete e.tengo[k]; else e.tengo[k] = true;
+      saveEvent(true); render();
+    });
+    $("copy").onclick = async () => {
+      const lines = ["*Compras " + e.nombre + "*"];
+      CATS.filter(c => byCat[c]).forEach(c => {
+        const list = byCat[c].filter(k => !tengo[k] && tot[k].total > 0); if (!list.length) return;
+        lines.push("", "*" + CAT_LABEL[c] + "*");
+        list.sort((a, b) => (S.insumos[a]?.nombre || a).localeCompare(S.insumos[b]?.nombre || b, "es")).forEach(k => lines.push("- " + cap(S.insumos[k]?.nombre || k) + ": " + fmtQty(S.insumos[k], tot[k].total)));
+      });
+      const text = lines.join("\n");
+      try { await navigator.clipboard.writeText(text); toast("Lista copiada"); }
+      catch(err){ copyFallback(text); }
+    };
+  }
+  function copyFallback(text){
+    sheet(`<h2>Copiá la lista</h2><p class="note">Seleccioná el texto y copialo.</p><textarea id="cpTxt" rows="14" readonly>${esc(text)}</textarea><div class="actions"><button class="btn" data-close>Listo</button></div>`);
+    const t = $("cpTxt"); t.focus(); t.select();
+  }
+
+  function renderRecetas(v){
+    const q = slug(S.q);
+    const list = recetasOrden().filter(([id, r]) => (!S.tipoF || r.tipo === S.tipoF) && (!q || slug(r.nombre).includes(q) || (r.items||[]).some(it => it.insumo.includes(q))));
+    v.className = "group";
+    v.innerHTML = `
+      <div class="actions" style="justify-content:stretch"><button class="btn" id="newRec" style="flex:1">+ Nueva receta</button></div>
+      <input type="search" id="recQ" placeholder="Buscar receta o ingrediente" value="${esc(S.q)}" aria-label="Buscar recetas">
+      <div class="chips">
+        ${[["","Todas"],["veggie","Veggie"],["carne","Carne"],["general","Para todos"]].map(([k, l]) => `<button class="chip" data-tf="${k}" aria-pressed="${S.tipoF === k}">${l}</button>`).join("")}
+      </div>
+      <div class="card">${list.length ? list.map(([id, r]) => { const faltan = (r.items||[]).filter(it => !it.cant).length; return `
+        <div class="recwrap">
+          <button class="row linkish" data-rec="${esc(id)}">
+            <div class="grow">
+              <div class="name">${esc(r.nombre)}<span class="pill ${r.tipo}">${TIPOS[r.tipo] || ""}</span>${r.revisar ? '<span class="pill warn">Revisar</span>' : ""}${faltan && r.tipo !== "general" ? `<span class="pill warn">${faltan} sin gramaje</span>` : ""}</div>
+              <div class="sub">${esc([r.turno, money(costoReceta(r).s) + " por persona"].filter(Boolean).join(" · "))}</div>
+            </div>
+          </button>
+          ${ingPanel(r, 0)}
+        </div>`; }).join("") : '<div class="empty">No hay recetas con esa búsqueda.</div>'}
+      </div>
+      <div class="ghead"><p class="note">${Object.keys(S.recetas).length} recetas en tu recetario.</p><button class="btn ghost sm xlsBtn">Descargar Excel</button></div>`;
+    $("newRec").onclick = () => recetaSheet(null);
+    const qi = $("recQ"); qi.oninput = () => { S.q = qi.value; renderRecetas(v); const n = $("recQ"); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+    v.querySelectorAll("[data-tf]").forEach(b => b.onclick = () => { S.tipoF = b.dataset.tf; render(); });
+    v.querySelectorAll("[data-rec]").forEach(b => b.onclick = () => recetaView(b.dataset.rec));
+  }
+
+  function renderEquipo(v){
+    const e = ev();
+    v.className = "group";
+    if (!e){ v.innerHTML = '<div class="empty">Creá un evento con <b>+ Evento</b> para calcular el equipo.</div>'; return; }
+    const n = equipoPersonas(e), d = equipoDias(e), sug = personasSugeridas(e), ok = e.utOk || {};
+    const limp = Object.entries(S.insumos).filter(([k, i]) => Number(i.porCienDia) > 0).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, "es"));
+    let costoLimp = 0;
+    const limpRows = limp.map(([k, ins]) => { const t = ins.porCienDia * n / 100 * d; const c = costoCompra(ins, t); costoLimp += c; return `
+      <div class="row"><button class="linkish grow" data-precio="${esc(k)}"><div class="name">${esc(cap(ins.nombre))}</div><div class="sub">${esc(nf(ins.porCienDia, 2))} por cada 100 personas por día · ${esc(precioLabel(ins))}</div></button>
+        <div class="qty">${esc(fmtQty(ins, t))}<div class="sub">${esc(money(c))}</div></div></div>`; }).join("");
+    const ut = utensiliosOrden();
+    const grupos = GRUPOS_UT.filter(g => ut.some(([id, u]) => u.grupo === g)).concat([...new Set(ut.map(([id, u]) => u.grupo))].filter(g => !GRUPOS_UT.includes(g)));
+    const faltan = ut.filter(([id, u]) => !ok[id] && cantUtensilio(u, n) > 0).length;
+    v.innerHTML = `
+      <section class="card" style="padding:14px;display:grid;gap:12px">
+        <div class="ghead"><h2>¿Para cuántas personas cocinás?</h2></div>
+        <div class="two">
+          <div class="field"><label for="eqN">Personas</label>
+            <div class="stepper"><button data-eq="personas" data-d="-10" aria-label="10 personas menos">−</button><input type="number" inputmode="numeric" min="1" id="eqN" value="${n}" aria-label="Personas"><button data-eq="personas" data-d="10" aria-label="10 personas más">+</button></div></div>
+          <div class="field"><label for="eqD">Días del evento</label>
+            <div class="stepper"><button data-eq="dias" data-d="-1" aria-label="Un día menos">−</button><input type="number" inputmode="numeric" min="1" id="eqD" value="${d}" aria-label="Días"><button data-eq="dias" data-d="1" aria-label="Un día más">+</button></div></div>
+        </div>
+        <p class="note">${e.equipo?.personas ? "" : `Sugerido según tu menú: la comida con más gente tiene ${sug} personas. `}La escala de utensilios va por tramos: hasta 50, hasta 100, hasta 200 y, de ahí en más, proporcional.</p>
+      </section>
+
+      <section class="group">
+        <div class="ghead"><span class="eyebrow">Limpieza y descartables</span><span class="note">${esc(money(costoLimp))}</span></div>
+        <div class="card">${limpRows || '<div class="empty">Sin artículos de limpieza cargados.</div>'}</div>
+        <p class="note">Se suman solos a la pestaña <b>Compras</b> y al presupuesto. Tocá un artículo para cambiarle el precio.</p>
+      </section>
+
+      ${personalHtml(e)}
+
+      <section class="group">
+        <div class="ghead"><span class="eyebrow">Utensilios para ${n} personas</span><span class="note">${faltan} por conseguir</span></div>
+        ${grupos.map(g => `
+          <div class="group"><span class="note"><b>${esc(g)}</b></span>
+          <div class="card">${ut.filter(([id, u]) => u.grupo === g).map(([id, u]) => { const q = cantUtensilio(u, n), has = !!ok[id]; return `
+            <div class="row${has ? " done" : ""}">
+              <button class="check" data-utok="${esc(id)}" aria-pressed="${has}" aria-label="Ya tengo ${esc(u.nombre)}">${has ? "✓" : ""}</button>
+              <button class="linkish grow" data-ut="${esc(id)}"><div class="name">${esc(u.nombre)}</div>${u.nota ? `<div class="sub">${esc(u.nota)}</div>` : ""}</button>
+              <div class="qty" style="font-size:18px">${q}</div>
+            </div>`; }).join("")}</div></div>`).join("")}
+        <div class="actions" style="justify-content:stretch"><button class="btn ghost" id="utNew" style="flex:1">+ Agregar utensilio</button></div>
+        <p class="note">Las cantidades son de referencia para cocina de eventos. Tocá un utensilio para ver o cambiar cuántos van para 50, 100 y 200 personas.</p>
+      </section>`;
+    let t = null;
+    const saveEq = (campo, val) => { e.equipo = Object.assign({}, e.equipo || {}, { [campo]: Math.max(1, val) }); clearTimeout(t); t = setTimeout(() => { saveEvent(true); render(); }, 600); };
+    v.querySelectorAll("[data-eq]").forEach(b => b.onclick = () => { const campo = b.dataset.eq, inp = campo === "personas" ? $("eqN") : $("eqD"); const val = Math.max(1, (parseInt(inp.value, 10) || 0) + Number(b.dataset.d)); inp.value = val; saveEq(campo, val); });
+    $("eqN").oninput = () => saveEq("personas", parseInt($("eqN").value, 10) || 1);
+    $("eqD").oninput = () => saveEq("dias", parseInt($("eqD").value, 10) || 1);
+    v.querySelectorAll("[data-precio]").forEach(b => b.onclick = () => precioSheet(b.dataset.precio));
+    v.querySelectorAll("[data-utok]").forEach(b => b.onclick = () => { const id = b.dataset.utok; e.utOk = e.utOk || {}; if (e.utOk[id]) delete e.utOk[id]; else e.utOk[id] = true; saveEvent(true); render(); });
+    v.querySelectorAll("[data-ut]").forEach(b => b.onclick = () => utensilioSheet(b.dataset.ut));
+    v.querySelectorAll("[data-rolstep]").forEach(b => b.onclick = () => {
+      const id = b.dataset.rolstep; e.personal = e.personal || {}; e.personal.cant = Object.assign({}, e.personal.cant || {});
+      e.personal.cant[id] = Math.max(0, personalCant(e, id) + Number(b.dataset.d)); saveEvent(); render();
+    });
+    v.querySelectorAll("[data-rol]").forEach(b => b.onclick = () => rolSheet(b.dataset.rol));
+    const hb = $("horasEdit"); if (hb) hb.onclick = horasSheet;
+    $("utNew").onclick = () => utensilioSheet(null);
+  }
+
+  function personalHtml(e){
+    const cfg = personalCfg(), s = servicios(e), h = cfg.horas, hs = horasEvento(e);
+    const servTxt = Object.keys(TIPOS_SERV).filter(t => s[t]).map(t => `${s[t]} ${TIPOS_SERV[t].toLowerCase()} de ${nf(h[t], 1)} h`).join(" · ") || "Todavía no hay servicios en el menú";
+    const total = costoPersonal(e);
+    return `<section class="group">
+      <div class="ghead"><span class="eyebrow">Personal</span><span class="note">${esc(money(total))}</span></div>
+      <div class="card">
+        <div class="row"><div class="grow"><div class="name">Servicios del evento</div><div class="sub">${esc(servTxt)} · ${esc(nf(hs, 1))} h en total por persona</div></div><button class="btn ghost sm" id="horasEdit">Horas</button></div>
+        ${cfg.roles.map(r => { const c = personalCant(e, r.id), t = Number(r.tarifa) || 0; return `
+        <div class="row">
+          <button class="linkish grow" data-rol="${esc(r.id)}">
+            <div class="name">${esc(r.nombre)}</div>
+            <div class="sub">${esc(money(t))} por hora · ${esc(money(t * h.desayuno))} por desayuno · ${esc(money(t * h.almuerzo))} por almuerzo${h.cena !== h.almuerzo ? " · " + esc(money(t * h.cena)) + " por cena" : " o cena"}</div>
+            <div class="sub"><b>${esc(money(c * t * hs))}</b> en total</div>
+          </button>
+          <div class="stepper" role="group" aria-label="Cantidad de ${esc(r.nombre)}">
+            <button data-rolstep="${esc(r.id)}" data-d="-1" aria-label="Uno menos">−</button>
+            <input type="number" value="${c}" readonly aria-label="Cantidad" tabindex="-1">
+            <button data-rolstep="${esc(r.id)}" data-d="1" aria-label="Uno más">+</button>
+          </div>
+        </div>`; }).join("")}
+      </div>
+      <p class="note">El pago se calcula por hora según los servicios de tu menú y se suma al presupuesto total. La cantidad de cocineros sugerida cambia con las personas (1 hasta 50, 2 hasta 100, 3 hasta 200). Tocá un rol para cambiar lo que pagás por hora.</p>
+    </section>`;
+  }
+
+  function rolSheet(id){
+    const cfg = personalCfg(); const r = cfg.roles.find(x => x.id === id); if (!r) return;
+    const el = sheet(`
+      <div><span class="eyebrow">Personal</span><h2>${esc(r.nombre)}</h2></div>
+      <div class="field"><label for="rlT">Pago por hora ($)</label><input id="rlT" type="number" inputmode="decimal" min="0" step="any" value="${Number(r.tarifa) || 0}"></div>
+      <div class="field"><label for="rlF">De dónde sale</label><input id="rlF" value="${esc(/^UTHGRA|^Estimado/.test(r.fuente || "") ? "" : (r.fuente || ""))}" placeholder="Ej: lo que pagamos en 2026"></div>
+      ${r.fuente ? `<p class="note">Ahora: ${esc(r.fuente)}</p>` : ""}
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="rlOk">Guardar</button></div>`);
+    el.querySelector("#rlOk").onclick = async () => {
+      const v = Number(String($("rlT").value).replace(",", ".")); if (!(v >= 0)) return;
+      const roles = cfg.roles.map(x => x.id === id ? Object.assign({}, x, { tarifa: v, fuente: $("rlF").value.trim() || "Cargado por vos" }) : x);
+      try { await db.doc("config/personal").set({ horas: cfg.horas, roles }); closeSheet(); toast("Pago guardado"); } catch(e9){ toast("No se pudo guardar. Probá de nuevo."); }
+    };
+  }
+  function horasSheet(){
+    const cfg = personalCfg();
+    const el = sheet(`
+      <h2>Horas por servicio</h2>
+      <div class="two" style="grid-template-columns:repeat(3,1fr)">
+        ${Object.keys(TIPOS_SERV).map(t => `<div class="field"><label for="hs-${t}">${TIPOS_SERV[t]}</label><input id="hs-${t}" type="number" inputmode="decimal" min="0" step="0.5" value="${cfg.horas[t]}"></div>`).join("")}
+      </div>
+      <p class="note">Valen para todos tus eventos.</p>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="hsOk">Guardar</button></div>`);
+    el.querySelector("#hsOk").onclick = async () => {
+      const horas = {}; Object.keys(TIPOS_SERV).forEach(t => horas[t] = Math.max(0, Number(String($("hs-" + t).value).replace(",", ".")) || 0));
+      try { await db.doc("config/personal").set({ horas, roles: cfg.roles }); closeSheet(); toast("Horas guardadas"); } catch(e10){ toast("No se pudo guardar. Probá de nuevo."); }
+    };
+  }
+
+  function utensilioSheet(id){
+    const u = id ? S.utensilios[id] : { nombre:"", grupo:GRUPOS_UT[0], por50:1, por100:1, por200:2, nota:"" };
+    const el = sheet(`
+      <h2>${id ? "Utensilio" : "Nuevo utensilio"}</h2>
+      <div class="field"><label for="uNom">Nombre</label><input id="uNom" value="${esc(u.nombre)}" placeholder="Ej: Olla de 50 L"></div>
+      <div class="field"><label for="uGr">Grupo</label><select id="uGr">${GRUPOS_UT.map(g => `<option${u.grupo === g ? " selected" : ""}>${esc(g)}</option>`).join("")}</select></div>
+      <div class="field"><label>Cantidad según personas</label>
+        <div class="two" style="grid-template-columns:repeat(3,1fr)">
+          <div class="field"><label for="u50">Hasta 50</label><input id="u50" type="number" inputmode="numeric" min="0" value="${Number(u.por50)||0}"></div>
+          <div class="field"><label for="u100">Hasta 100</label><input id="u100" type="number" inputmode="numeric" min="0" value="${Number(u.por100)||0}"></div>
+          <div class="field"><label for="u200">Hasta 200</label><input id="u200" type="number" inputmode="numeric" min="0" value="${Number(u.por200)||0}"></div>
+        </div></div>
+      <div class="field"><label for="uNota">Nota (opcional)</label><input id="uNota" value="${esc(u.nota || "")}" placeholder="Tamaño, para qué se usa…"></div>
+      <div class="actions">${id ? '<button class="btn danger" id="uDel">Borrar</button>' : ""}<button class="btn ghost" data-close>Cancelar</button><button class="btn" id="uOk">Guardar</button></div>`);
+    el.querySelector("#uOk").onclick = async () => {
+      const nombre = $("uNom").value.trim(); if (!nombre){ $("uNom").focus(); return; }
+      const body = { nombre, grupo:$("uGr").value, por50:parseInt($("u50").value, 10) || 0, por100:parseInt($("u100").value, 10) || 0, por200:parseInt($("u200").value, 10) || 0, nota:$("uNota").value.trim(), orden: u.orden || 999 };
+      const uid = id || (slug(nombre) || "utensilio") + "-" + Date.now().toString(36).slice(-4);
+      try { await db.collection("utensilios").doc(uid).set(body); closeSheet(); toast("Utensilio guardado"); } catch(e7){ toast("No se pudo guardar. Probá de nuevo."); }
+    };
+    const del = el.querySelector("#uDel");
+    if (del) del.onclick = async () => {
+      if (!del.dataset.sure){ del.dataset.sure = "1"; del.textContent = "Tocá de nuevo para borrar"; return; }
+      closeSheet(); try { await db.collection("utensilios").doc(id).delete(); toast("Utensilio borrado"); } catch(e8){ toast("No se pudo borrar. Probá de nuevo."); }
+    };
+  }
+
+  // ---------- hojas (ventanas desde abajo) ----------
+  function sheet(html){
+    const root = $("sheetRoot");
+    root.innerHTML = `<div class="sheet-bg"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+    const bg = root.firstChild;
+    bg.addEventListener("click", ev2 => { if (ev2.target === bg || ev2.target.closest("[data-close]")) closeSheet(); });
+    return bg.firstChild;
+  }
+  function closeSheet(){ $("sheetRoot").innerHTML = ""; }
+  document.addEventListener("keydown", e2 => { if (e2.key === "Escape") closeSheet(); });
+
+  function platoSheet(pid){
+    const e = ev(); if (!e) return;
+    const p = pid ? e.platos.find(x => x.id === pid) : null;
+    const comidas = [...new Set(e.platos.map(x => x.comida).filter(Boolean))];
+    const el = sheet(`
+      <h2>${p ? "Editar plato" : "Agregar plato"}</h2>
+      <div class="field"><label for="pRec">Receta</label>
+        <select id="pRec">${recetasOrden().map(([id, r]) => `<option value="${esc(id)}"${p && p.receta === id ? " selected" : ""}>${esc(r.nombre)} (${TIPOS[r.tipo] || ""})</option>`).join("")}</select>
+      </div>
+      <div class="two">
+        <div class="field"><label for="pCom">Comida</label><input id="pCom" list="comidas" placeholder="Ej: Vie cena" value="${esc(p ? p.comida : (comidas[comidas.length-1] || ""))}"><datalist id="comidas">${comidas.map(c => `<option value="${esc(c)}">`).join("")}</datalist></div>
+        <div class="field"><label for="pPer">Personas</label><input id="pPer" type="number" inputmode="numeric" min="0" value="${p ? Number(p.personas)||0 : ""}" placeholder="0"></div>
+      </div>
+      <div class="actions">
+        ${p ? '<button class="btn danger" id="pDel">Quitar del menú</button>' : ""}
+        <button class="btn ghost" data-close>Cancelar</button>
+        <button class="btn" id="pOk">${p ? "Guardar" : "Agregar"}</button>
+      </div>`);
+    el.querySelector("#pOk").onclick = () => {
+      const data = { receta:$("pRec").value, comida:$("pCom").value.trim(), personas:Math.max(0, parseInt($("pPer").value, 10) || 0) };
+      if (p) Object.assign(p, data); else e.platos.push({ id:"p" + Date.now().toString(36), ...data });
+      saveEvent(true); closeSheet(); render(); toast(p ? "Plato guardado" : "Plato agregado");
+    };
+    const del = el.querySelector("#pDel");
+    if (del) del.onclick = () => {
+      if (del.dataset.sure){ e.platos = e.platos.filter(x => x !== p); saveEvent(true); closeSheet(); render(); toast("Plato quitado"); }
+      else { del.dataset.sure = "1"; del.textContent = "Tocá de nuevo para quitar"; }
+    };
+  }
+
+  function eventSheet(){
+    const e = ev(); if (!e) return;
+    const el = sheet(`
+      <h2>Evento</h2>
+      <div class="field"><label for="eNom">Nombre</label><input id="eNom" value="${esc(e.nombre)}"></div>
+      <div class="field"><label for="eNota">Nota (opcional)</label><input id="eNota" value="${esc(e.nota || "")}" placeholder="Fechas, lugar, cantidad de gente…"></div>
+      <div class="actions">
+        <button class="btn danger" id="eDel">Borrar evento</button>
+        <button class="btn ghost" data-close>Cancelar</button>
+        <button class="btn" id="eOk">Guardar</button>
+      </div>`);
+    el.querySelector("#eOk").onclick = () => { const n = $("eNom").value.trim(); if (!n) return; e.nombre = n; e.nota = $("eNota").value.trim(); saveEvent(true); closeSheet(); render(); toast("Evento guardado"); };
+    const del = el.querySelector("#eDel");
+    del.onclick = async () => {
+      if (!del.dataset.sure){ del.dataset.sure = "1"; del.textContent = "Tocá de nuevo para borrar"; return; }
+      const id = S.evId; closeSheet();
+      try { await db.collection("eventos").doc(id).delete(); toast("Evento borrado"); } catch(err){ toast("No se pudo borrar. Probá de nuevo."); }
+    };
+  }
+
+  function newEventSheet(){
+    const ids = Object.keys(S.eventos);
+    const el = sheet(`
+      <h2>Nuevo evento</h2>
+      <div class="field"><label for="nNom">Nombre</label><input id="nNom" placeholder="Ej: Acrolandia 2027"></div>
+      <div class="field"><label for="nCopy">Empezar con el menú de</label>
+        <select id="nCopy"><option value="">Menú vacío</option>${ids.map(id => `<option value="${esc(id)}">${esc(S.eventos[id].nombre)}</option>`).join("")}</select>
+      </div>
+      <p class="note">Si copiás un menú, se copian los platos y las personas. Después cambiás los números.</p>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="nOk">Crear</button></div>`);
+    $("nNom").focus();
+    el.querySelector("#nOk").onclick = async () => {
+      const nombre = $("nNom").value.trim(); if (!nombre){ $("nNom").focus(); return; }
+      const src = S.eventos[$("nCopy").value];
+      const id = (slug(nombre) || "evento") + "-" + Date.now().toString(36).slice(-4);
+      const body = { nombre, nota:"", creado:new Date().toISOString().slice(0,10), platos: src ? JSON.parse(JSON.stringify(src.platos || [])) : [], tengo:{} };
+      try { await db.collection("eventos").doc(id).set(body); S.eventos[id] = body; render(); eventoCreadoSheet(id, nombre); }
+      catch(err){ toast("No se pudo crear el evento. Probá de nuevo."); }
+    };
+  }
+  // después de crear: el evento nuevo se abre en otra pestaña con su propio link, y esta pestaña sigue en el evento anterior
+  function eventoCreadoSheet(id, nombre){
+    const url = linkEvento(id);
+    const el = sheet(`
+      <div><span class="eyebrow">Evento creado</span><h2>${esc(nombre)}</h2></div>
+      <p class="note">Tiene su propio link. Abrilo en otra pestaña para trabajarlo en paralelo: este evento sigue abierto acá y no se borra nada.</p>
+      <a class="btn" href="${esc(url)}" target="_blank" rel="noopener" id="ecOpen">Abrir en una pestaña nueva ↗</a>
+      <div class="field"><label for="ecUrl">Link del evento</label><input id="ecUrl" value="${esc(url)}" readonly></div>
+      <div class="actions"><button class="btn ghost" id="ecCopy">Copiar link</button><button class="btn ghost" id="ecHere">Abrirlo acá</button><button class="btn ghost" data-close>Listo</button></div>`);
+    el.querySelector("#ecOpen").addEventListener("click", () => setTimeout(closeSheet, 300));
+    el.querySelector("#ecHere").onclick = () => { S.evId = id; S.tab = "menu"; remember(); closeSheet(); render(); };
+    el.querySelector("#ecCopy").onclick = async () => {
+      try { await navigator.clipboard.writeText(url); toast("Link copiado"); }
+      catch(e11){ const i = $("ecUrl"); i.focus(); i.select(); toast("Seleccioná el link y copialo"); }
+    };
+  }
+
+  function precioSheet(k){
+    const ins = S.insumos[k]; if (!ins) return;
+    const u = uPrecio(ins);
+    const el = sheet(`
+      <div><span class="eyebrow">Precio</span><h2>${esc(cap(ins.nombre))}</h2></div>
+      <div class="field"><label for="prVal">Precio por ${esc(u)} ($)</label><input id="prVal" type="number" inputmode="decimal" min="0" step="any" value="${tienePrecio(ins) ? ins.precio : ""}" placeholder="0"></div>
+      <div class="field"><label for="prSrc">De dónde sale el precio</label><input id="prSrc" value="${esc(ins.fuente && !/^Estimado/.test(ins.fuente) ? ins.fuente : "")}" placeholder="Ej: Distridiet, lista octubre"></div>
+      ${ins.fuente ? `<p class="note">Ahora: ${esc(ins.fuente)}</p>` : ""}
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="prOk">Guardar precio</button></div>`);
+    $("prVal").focus();
+    el.querySelector("#prOk").onclick = async () => {
+      const v = Number(String($("prVal").value).replace(",", ".")); if (!(v >= 0)) return;
+      const body = JSON.parse(JSON.stringify(ins)); body.precio = v; body.fuente = $("prSrc").value.trim() || "Cargado por vos"; body.fechaPrecio = new Date().toISOString().slice(0, 10);
+      try { await db.collection("insumos").doc(k).set(body); closeSheet(); toast("Precio guardado"); } catch(e6){ toast("No se pudo guardar. Probá de nuevo."); }
+    };
+  }
+
+  function recetaView(id){
+    const r = S.recetas[id]; if (!r) return;
+    const cr = costoReceta(r);
+    const el = sheet(`
+      <div><span class="eyebrow">${esc([TIPOS[r.tipo], r.turno].filter(Boolean).join(" · "))}</span><h2>${esc(r.nombre)}</h2>
+        <p class="note">Costo estimado: <b>${esc(money(cr.s))} por persona</b>${cr.falta ? ` · ${cr.falta} ingrediente${cr.falta > 1 ? "s" : ""} sin precio` : ""}</p></div>
+      ${r.revisar ? `<div class="alert warn"><b>Para revisar</b><span>${esc(r.revisar)}</span><button class="btn sm ghost" id="rOkRev" style="justify-self:start">Ya lo revisé</button></div>` : ""}
+      <div class="card">${(r.items||[]).map(it => { const ins = S.insumos[it.insumo] || {nombre:it.insumo}; return `
+        <div class="row"><div class="grow"><div class="name">${esc(cap(ins.nombre))}</div><div class="sub">${esc(CAT_LABEL[ins.categoria] || "")}</div></div><div class="qty">${it.cant ? esc(fmtPorcion(ins, it.cant)) : '<span class="pill warn">falta gramaje</span>'}</div></div>`; }).join("")}
+      </div>
+      <div class="actions">
+        <button class="btn danger" id="rDel">Borrar</button>
+        <button class="btn ghost" id="rEdit">Editar</button>
+        ${ev() ? '<button class="btn" id="rAdd">Agregar al menú</button>' : ""}
+      </div>`);
+    el.querySelector("#rEdit").onclick = () => recetaSheet(id);
+    const rev = el.querySelector("#rOkRev");
+    if (rev) rev.onclick = async () => {
+      const body = JSON.parse(JSON.stringify(r)); delete body.revisar;
+      try { await db.collection("recetas").doc(id).set(body); closeSheet(); toast("Marcada como revisada"); } catch(e5){ toast("No se pudo guardar. Probá de nuevo."); }
+    };
+    const add = el.querySelector("#rAdd");
+    if (add) add.onclick = () => { closeSheet(); S.tab = "menu"; remember(); render(); platoSheet(null); setTimeout(() => { const s = $("pRec"); if (s) s.value = id; }, 0); };
+    const del = el.querySelector("#rDel");
+    del.onclick = async () => {
+      const usada = Object.values(S.eventos).filter(e => (e.platos||[]).some(p => p.receta === id)).map(e => e.nombre);
+      if (!del.dataset.sure){ del.dataset.sure = "1"; del.textContent = usada.length ? `Se usa en ${usada.join(", ")}. Tocá de nuevo para borrar` : "Tocá de nuevo para borrar"; return; }
+      closeSheet();
+      try { await db.collection("recetas").doc(id).delete(); toast("Receta borrada"); } catch(err){ toast("No se pudo borrar. Probá de nuevo."); }
+    };
+  }
+
+  // ---------- nueva receta / editar, con control de duplicados ----------
+  function findInsumo(name){
+    const s = slug(name); if (!s) return null;
+    if (S.insumos[s]) return s;
+    return Object.keys(S.insumos).find(k => slug(S.insumos[k].nombre) === s) || null;
+  }
+  function closestInsumo(name){
+    const s = slug(name); if (s.length < 3) return null;
+    let best = null, bd = 99;
+    Object.keys(S.insumos).forEach(k => {
+      const d = (k.includes(s) || s.includes(k)) ? 1 : lev(s, k);
+      if (d < bd){ bd = d; best = k; }
+    });
+    return bd <= 2 ? best : null;
+  }
+  function recetaSheet(id){
+    const r = id ? S.recetas[id] : null;
+    const draft = { nombre: r ? r.nombre : "", tipo: r ? r.tipo : "veggie", turno: r ? r.turno || "" : "Almuerzo",
+      items: r ? (r.items||[]).map(it => ({ nombre: S.insumos[it.insumo]?.nombre || it.insumo, cant: it.cant || "" })) : [{nombre:"", cant:""}], forzar:false };
+    const el = sheet(`
+      <h2>${r ? "Editar receta" : "Nueva receta"}</h2>
+      <div class="field"><label for="rNom">Nombre del plato</label><input id="rNom" value="${esc(draft.nombre)}" placeholder="Ej: Curry de garbanzos"></div>
+      <div class="two">
+        <div class="field"><label for="rTipo">Tipo</label><select id="rTipo">${Object.entries(TIPOS).map(([k, l]) => `<option value="${k}"${draft.tipo === k ? " selected" : ""}>${l}</option>`).join("")}</select></div>
+        <div class="field"><label for="rTurno">Turno</label><select id="rTurno">${["Desayuno","Almuerzo","Cena","Postre",""].map(t => `<option value="${t}"${draft.turno === t ? " selected" : ""}>${t || "Cualquiera"}</option>`).join("")}</select></div>
+      </div>
+      <div id="dupBox"></div>
+      <div class="field"><label>Ingredientes por persona</label><div id="ings" class="group"></div>
+        <datalist id="insList">${Object.values(S.insumos).map(i => `<option value="${esc(i.nombre)}">`).join("")}</datalist>
+        <button class="btn ghost sm" id="addIng" style="justify-self:start">+ Ingrediente</button>
+      </div>
+      <div id="errBox"></div>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="rOk">Guardar receta</button></div>`);
+
+    function drawIngs(){
+      const box = el.querySelector("#ings");
+      box.innerHTML = draft.items.map((it, i) => {
+        const k = findInsumo(it.nombre), ins = k ? S.insumos[k] : null;
+        const near = !k && it.nombre.trim() ? closestInsumo(it.nombre) : null;
+        return `<div class="ing">
+          <input list="insList" id="in-${i}" data-i="${i}" data-f="nombre" value="${esc(it.nombre)}" placeholder="Ingrediente" aria-label="Ingrediente ${i+1}">
+          <div><input type="number" inputmode="decimal" step="any" min="0" id="ic-${i}" data-i="${i}" data-f="cant" value="${esc(it.cant)}" placeholder="0" aria-label="Cantidad por persona"><div class="unit">${ins ? (ins.unidad === "u" ? esc(plural(ins.etiqueta || "unidad", 2)) : (ins.unidad === "ml" ? "ml" : "gramos")) : (it.unidad === "u" ? "unidades" : it.unidad === "ml" ? "ml" : "gramos")}</div></div>
+          <button class="x" data-del="${i}" aria-label="Quitar ingrediente">×</button>
+          ${!k && it.nombre.trim() ? `<div class="newi">
+            <p>${near ? `Ingrediente nuevo. ¿Es <b>${esc(S.insumos[near].nombre)}</b>? <button class="btn sm ghost" data-use="${i}" data-k="${esc(near)}">Usar ese</button>` : "Ingrediente nuevo: elegí dónde se compra y cómo se mide."}</p>
+            <select id="icat-${i}" data-i="${i}" data-f="categoria" aria-label="Categoría">${CATS.map(c => `<option value="${c}"${(it.categoria || "Verduleria") === c ? " selected" : ""}>${CAT_LABEL[c]}</option>`).join("")}</select>
+            <select id="iuni-${i}" data-i="${i}" data-f="unidad" aria-label="Se mide en"><option value="g"${!it.unidad || it.unidad === "g" ? " selected" : ""}>Gramos</option><option value="ml"${it.unidad === "ml" ? " selected" : ""}>Mililitros (líquidos)</option><option value="u"${it.unidad === "u" ? " selected" : ""}>Unidades</option></select>
+          </div>` : ""}
+        </div>`;
+      }).join("");
+      box.querySelectorAll("[data-f]").forEach(inp => {
+        inp.addEventListener(inp.tagName === "SELECT" ? "change" : "input", () => { draft.items[+inp.dataset.i][inp.dataset.f] = inp.value; draft.forzar = false; if (inp.dataset.f === "nombre") debouncedDraw(inp.id); checkDup(); });
+      });
+      box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { draft.items.splice(+b.dataset.del, 1); if (!draft.items.length) draft.items.push({nombre:"", cant:""}); drawIngs(); checkDup(); });
+      box.querySelectorAll("[data-use]").forEach(b => b.onclick = () => { draft.items[+b.dataset.use].nombre = S.insumos[b.dataset.k].nombre; drawIngs(); checkDup(); });
+    }
+    let drawT = null;
+    function debouncedDraw(focusId){ clearTimeout(drawT); drawT = setTimeout(() => { const pos = $(focusId)?.selectionStart; drawIngs(); const f = $(focusId); if (f){ f.focus(); try { f.setSelectionRange(pos, pos); } catch(e3){} } }, 450); }
+
+    function dupInfo(){
+      const nom = el.querySelector("#rNom").value.trim();
+      const tk = tokens(nom), keyNom = [...tk].sort().join("-");
+      const ings = new Set(draft.items.map(it => findInsumo(it.nombre) || slug(it.nombre)).filter(Boolean));
+      let exact = null; const similar = [];
+      Object.entries(S.recetas).forEach(([rid, rr]) => {
+        if (rid === id) return;
+        const t2 = tokens(rr.nombre);
+        if (keyNom && [...t2].sort().join("-") === keyNom){ exact = [rid, rr]; return; }
+        const ns = jaccard(tk, t2);
+        const is = ings.size >= 3 ? jaccard(ings, new Set((rr.items||[]).map(x => x.insumo))) : 0;
+        if (ns >= 0.67 || is >= 0.8) similar.push({rid, rr, ns, is});
+      });
+      similar.sort((a, b) => Math.max(b.ns, b.is) - Math.max(a.ns, a.is));
+      return { exact, similar: similar.slice(0, 3) };
+    }
+    function checkDup(){
+      const box = el.querySelector("#dupBox"), { exact, similar } = dupInfo();
+      if (exact){ box.innerHTML = `<div class="alert err"><b>Ya existe «${esc(exact[1].nombre)}».</b><span>Cambiá el nombre o editá la receta que ya tenés.</span><button class="btn sm ghost" id="goEx" style="justify-self:start">Abrir la que existe</button></div>`; box.querySelector("#goEx").onclick = () => recetaSheet(exact[0]); return; }
+      if (similar.length){ box.innerHTML = `<div class="alert warn"><b>Se parece a ${similar.length === 1 ? "una receta" : "recetas"} que ya tenés:</b>${similar.map(s => `<span>· ${esc(s.rr.nombre)}${s.is >= 0.8 ? ` (${Math.round(s.is*100)}% mismos ingredientes)` : ""}</span>`).join("")}<span>Si es otra versión (por ejemplo veggie o con carne), guardala igual.</span></div>`; return; }
+      box.innerHTML = "";
+    }
+
+    el.querySelector("#rNom").oninput = () => { draft.forzar = false; checkDup(); };
+    el.querySelector("#addIng").onclick = () => { draft.items.push({nombre:"", cant:""}); drawIngs(); $("in-" + (draft.items.length - 1)).focus(); };
+    drawIngs(); checkDup();
+
+    el.querySelector("#rOk").onclick = async () => {
+      const err = el.querySelector("#errBox"); err.innerHTML = "";
+      const nombre = el.querySelector("#rNom").value.trim();
+      const items = draft.items.filter(it => it.nombre.trim());
+      if (!nombre){ err.innerHTML = '<div class="alert err">Poné el nombre del plato.</div>'; return; }
+      if (!items.length){ err.innerHTML = '<div class="alert err">Agregá al menos un ingrediente.</div>'; return; }
+      const { exact, similar } = dupInfo();
+      if (exact){ err.innerHTML = `<div class="alert err">No se guardó: ya existe «${esc(exact[1].nombre)}».</div>`; return; }
+      if (similar.length && !draft.forzar){ draft.forzar = true; const b = el.querySelector("#rOk"); b.textContent = "Guardar igual"; err.innerHTML = '<div class="alert warn">Revisá el aviso de arriba. Si es una receta distinta, tocá <b>Guardar igual</b>.</div>'; return; }
+      const nuevos = {}, out = [], seen = new Set();
+      for (const it of items){
+        let k = findInsumo(it.nombre);
+        if (!k){ k = slug(it.nombre); if (!nuevos[k]) nuevos[k] = { nombre: it.nombre.trim().toLowerCase(), categoria: it.categoria || "Verduleria", unidad: it.unidad === "u" ? "u" : it.unidad === "ml" ? "ml" : "g", ...(it.unidad === "u" ? { etiqueta:"unidad" } : {}) }; }
+        if (seen.has(k)) continue; seen.add(k);
+        out.push({ insumo:k, cant: Number(String(it.cant).replace(",", ".")) || 0 });
+      }
+      const rid = id || slug(nombre) || ("receta-" + Date.now().toString(36));
+      const btn = el.querySelector("#rOk"); btn.disabled = true; btn.textContent = "Guardando…";
+      try {
+        for (const [k, body] of Object.entries(nuevos)) await db.collection("insumos").doc(k).set(body);
+        await db.collection("recetas").doc(rid).set({ nombre, tipo: el.querySelector("#rTipo").value, turno: el.querySelector("#rTurno").value, items: out });
+        closeSheet(); toast(id ? "Receta guardada" : "Receta agregada");
+      } catch(e4){ btn.disabled = false; btn.textContent = "Guardar receta"; err.innerHTML = '<div class="alert err">No se pudo guardar. Revisá la conexión y probá de nuevo.</div>'; }
+    };
+  }
+
+  // ---------- conexión a Supabase (misma forma que usaba la app: colecciones de documentos) ----------
+  const SB = window.supabase.createClient("https://gtkbnbijembffspgwfno.supabase.co", "sb_publishable_SwiU5aIuLqz4vyO7PnsXmg_wJD7ZveT", { db: { schema: "teamc" } });
+  let sesion = null;
+  function pedirLogin(){
+    const el = sheet(`<h2>Entrar para editar</h2>
+      <p class="note">Te mandamos un link a tu mail. Solo pueden editar los mails autorizados del equipo.</p>
+      <div class="field"><label for="lgMail">Tu mail</label><input id="lgMail" type="email" autocomplete="email" placeholder="tu@mail.com"></div>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="lgOk">Mandarme el link</button></div>`);
+    $("lgMail").focus();
+    el.querySelector("#lgOk").onclick = async () => {
+      const mail = $("lgMail").value.trim(); if (!mail) return;
+      const { error } = await SB.auth.signInWithOtp({ email: mail, options: { emailRedirectTo: location.origin + location.pathname + location.hash } });
+      if (error) { toast("No se pudo mandar el link. Probá de nuevo."); return; }
+      closeSheet(); toast("Te mandamos el link. Revisá tu mail.");
+    };
+  }
+  function pintarSesion(){
+    const b = $("authbar"); if (!b) return;
+    if (sesion){ b.innerHTML = `<span class="who">${esc(sesion.user.email)}</span><button class="btn ghost sm" id="lgOut">Salir</button>`; $("lgOut").onclick = async () => { await SB.auth.signOut(); }; }
+    else { b.innerHTML = `<button class="btn ghost sm" id="lgIn">Entrar</button>`; $("lgIn").onclick = pedirLogin; }
+  }
+  const sinPermiso = () => { if (!sesion){ pedirLogin(); return Promise.reject({ code: "login" }); } return null; };
+  const tablaDe = col => col;
+  function crearDb(){
+    const ref = (col, id) => ({
+      set: async data => { const no = sinPermiso(); if (no) return no; const { error } = await SB.from(tablaDe(col)).upsert({ id, data, updated_at: new Date().toISOString() }); if (error){ toast(error.code === "42501" ? "Tu mail no tiene permiso para editar." : "No se pudo guardar."); throw error; } },
+      update: async data => { const { data: fila } = await SB.from(tablaDe(col)).select("data").eq("id", id).maybeSingle(); return ref(col, id).set(Object.assign({}, fila ? fila.data : {}, data)); },
+      delete: async () => { const no = sinPermiso(); if (no) return no; const { error } = await SB.from(tablaDe(col)).delete().eq("id", id); if (error){ toast("No se pudo borrar."); throw error; } },
+      get: async () => { const { data: fila } = await SB.from(tablaDe(col)).select("data").eq("id", id).maybeSingle(); return { exists: !!fila, data: () => fila ? fila.data : undefined }; }
+    });
+    return {
+      doc: path => { const [c, id] = path.split("/"); return ref(c, id); },
+      collection: col => ({
+        doc: id => ref(col, id || (Date.now().toString(36) + Math.random().toString(36).slice(2, 6))),
+        onSnapshot: (cb, onErr) => {
+          const mapa = {};
+          const emitir = () => cb({ docs: Object.keys(mapa).map(id => ({ id, exists: true, data: () => mapa[id] })) });
+          (async () => {
+            let desde = 0;
+            while (true){
+              const { data, error } = await SB.from(tablaDe(col)).select("id,data").range(desde, desde + 999);
+              if (error){ if (onErr) onErr(error); return; }
+              data.forEach(f => { mapa[f.id] = f.data; });
+              if (data.length < 1000) break; desde += 1000;
+            }
+            emitir();
+            SB.channel("rt-" + col).on("postgres_changes", { event: "*", schema: "teamc", table: tablaDe(col) }, p => {
+              if (p.eventType === "DELETE") delete mapa[p.old.id]; else mapa[p.new.id] = p.new.data;
+              emitir();
+            }).subscribe();
+          })();
+          return () => {};
+        }
+      })
+    };
+  }
+  // descargas: en la web propia se bajan directo
+  const descargasWeb = { save: async ({ filename, data }) => { const b = data instanceof Blob ? data : new Blob([data]); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); return { status: "saved" }; } };
+  // ---------- navegación ----------
+  function remember(){ try { localStorage.setItem("cocina-tab", S.tab); if (S.evId) localStorage.setItem("cocina-ev", S.evId); } catch(e){} }
+  document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; remember(); render(); window.scrollTo(0, 0); });
+  $("evSel").onchange = () => { S.evId = $("evSel").value; S.open = {}; remember(); render(); };
+  $("evNew").onclick = () => { if (db) newEventSheet(); };
+
+  // ---------- datos ----------
+  (async () => {
+    const { data: { session } } = await SB.auth.getSession(); sesion = session; pintarSesion();
+    SB.auth.onAuthStateChange((_e, s) => { sesion = s; pintarSesion(); });
+    db = crearDb();
+    if (!db){ render(); return; }
+    const sub = (col, key) => {
+      let first = true;
+      db.collection(col).onSnapshot(snap => {
+        const m = {}; snap.docs.forEach(d => { m[d.id] = d.data(); });
+        if (col === "eventos"){
+          // no pisar cambios propios que todavía se están guardando
+          // copias editables de todos los eventos; si este evento tiene cambios sin guardar, se conserva la versión local
+          Object.keys(m).forEach(k => { m[k] = JSON.parse(JSON.stringify(m[k])); });
+          if ((saveTimer || pendiente) && S.eventos[S.evId] && m[S.evId]) m[S.evId] = S.eventos[S.evId];
+        }
+        S[key] = m;
+        if (first){ first = false; S.loaded++; }
+        const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest(".sheet, .stepper, #recQ");
+        if (!typing) render();
+      }, () => { $("view").innerHTML = '<div class="empty">Se cortó la conexión con tus datos. Recargá la página.</div>'; });
+    };
+    sub("insumos", "insumos"); sub("recetas", "recetas"); sub("eventos", "eventos"); sub("utensilios", "utensilios"); sub("config", "config");
+    downloads = descargasWeb;
+    render();
+  })();
+  render();
+})();
+</script>
+<script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));</script>
+</body>
+</html>
