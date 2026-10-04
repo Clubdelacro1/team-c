@@ -377,13 +377,13 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
     const e = ev();
     if (e){
       const tot = compute(e), tengo = e.tengo || {};
-      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde","Comprado","Precio","Precio por","Costo estimado","Fuente del precio"]];
+      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Comprado","Precio","Precio por","Costo estimado","Fuente del precio"]];
       let totalCosto = 0;
       Object.keys(tot).sort((a, b) => { const ia = S.insumos[a] || {}, ib = S.insumos[b] || {}; return (CATS.indexOf(ia.categoria) - CATS.indexOf(ib.categoria)) || (ia.nombre || a).localeCompare(ib.nombre || b, "es"); })
         .forEach(k => { const ins = S.insumos[k] || {nombre:k}; const q = cantCompra(ins, tot[k].total); const c = Math.round(costoCompra(ins, tot[k].total)); totalCosto += c;
-          compras.push([CAT_LABEL[ins.categoria] || "", cap(ins.nombre), q.n, q.u, ins.donde || "", tengo[k] ? "sí" : "", tienePrecio(ins) ? ins.precio : "", tienePrecio(ins) ? uPrecio(ins) : "", tienePrecio(ins) ? c : "sin precio", ins.fuente || ""]); });
-      compras.push([], ["", "PRESUPUESTO TOTAL", "", "", "", "", "", "", totalCosto, ""]);
-      add("Compras", compras, [16,30,10,12,14,9,10,10,14,50]);
+          compras.push([CAT_LABEL[ins.categoria] || "", cap(ins.nombre), q.n, q.u, tengo[k] ? "sí" : "", tienePrecio(ins) ? ins.precio : "", tienePrecio(ins) ? uPrecio(ins) : "", tienePrecio(ins) ? c : "sin precio", ins.fuente || ""]); });
+      compras.push([], ["", "PRESUPUESTO TOTAL", "", "", "", "", "", totalCosto, ""]);
+      add("Compras", compras, [16,30,10,12,10,10,10,14,50]);
       const menu = [["Comida","Plato","Tipo","Personas","Costo por persona","Costo total"]];
       (e.platos||[]).forEach(p => { const r = S.recetas[p.receta]; const cp = r ? Math.round(costoReceta(r).s) : 0; menu.push([p.comida || "", r ? r.nombre : "Receta borrada", r ? TIPOS[r.tipo] || "" : "", Number(p.personas)||0, cp, cp * (Number(p.personas)||0)]); });
       add("Menú", menu, [24,38,12,10,16,14]);
