@@ -554,9 +554,15 @@ html,body{margin:0}
       e.platos.splice(idx, 1); saveEvent(true); render();
       undoToast("Plato quitado", () => { e.platos.splice(Math.min(idx, e.platos.length), 0, p); saveEvent(true); render(); });
     });
-    v.querySelectorAll("[data-pers]").forEach(inp => inp.oninput = () => {
-      const p = e.platos.find(x => x.id === inp.dataset.pers); if (!p) return;
-      p.personas = Math.max(0, parseInt(inp.value, 10) || 0); saveEvent(); refreshStats();
+    v.querySelectorAll("[data-pers]").forEach(inp => {
+      // al tocar el casillero se selecciona el número, así escribís el nuevo directamente
+      inp.onfocus = () => { try { inp.select(); } catch(err){} };
+      inp.oninput = () => {
+        const p = (ev().platos || []).find(x => x.id === inp.dataset.pers); if (!p) return;
+        if (inp.value.trim() === "") return; // mientras está vacío (borrando para escribir otro) no se guarda nada
+        p.personas = Math.max(0, parseInt(inp.value, 10) || 0); saveEvent(); refreshStats();
+      };
+      inp.onblur = () => { if (inp.value.trim() === ""){ const p = (ev().platos || []).find(x => x.id === inp.dataset.pers); inp.value = p ? (Number(p.personas) || 0) : 0; } };
     });
   }
   // lista desplegable de ingredientes: se abre al pasar el mouse (o tocando "Ver ingredientes" en el celu)
@@ -1209,6 +1215,12 @@ html,body{margin:0}
           // copias editables de todos los eventos; si este evento tiene cambios sin guardar, se conserva la versión local
           Object.keys(m).forEach(k => { m[k] = JSON.parse(JSON.stringify(m[k])); });
           if ((saveTimer || pendiente) && S.eventos[S.evId] && m[S.evId]) m[S.evId] = S.eventos[S.evId];
+          // actualizar los eventos "en el lugar": así los botones y casilleros que ya están en pantalla
+          // siguen apuntando al mismo evento y ningún cambio se anota sobre una copia vieja
+          Object.keys(m).forEach(k => {
+            const viejo = S.eventos[k];
+            if (viejo && viejo !== m[k]){ Object.keys(viejo).forEach(x => { delete viejo[x]; }); Object.assign(viejo, m[k]); m[k] = viejo; }
+          });
         }
         S[key] = m;
         if (first){ first = false; S.loaded++; }
