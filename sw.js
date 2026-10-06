@@ -1,6 +1,6 @@
 // TEAM C: guarda la "cáscara" de la app para que abra rápido e instalable en el celular.
 // Los datos siempre se piden en vivo a Supabase.
-const CACHE = "teamc-v4";
+const CACHE = "teamc-v5";
 const BASE = ["./", "./index.html", "./manifest.json", "./img/icono-192.png", "./img/icono-512.png"];
 
 self.addEventListener("install", e => {

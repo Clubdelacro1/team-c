@@ -179,7 +179,28 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
   const money = n => "$" + Math.round(n).toLocaleString("es-AR");
   const tienePrecio = ins => ins && Number(ins.precio) > 0;
   // costo de compra: con las cantidades redondeadas como en la lista (kg de a 100 g, unidades enteras)
+  // presentaciones del mayorista: busca la combinación más barata (un tamaño grande + el resto en otro tamaño) que cubra lo necesario
+  function planCompra(ins, total){
+    const ps = (ins && ins.presentaciones || []).filter(p => p.tam > 0 && p.precio > 0).slice().sort((a, b) => a.tam - b.tam);
+    if (!ps.length || !(total > 0)) return null;
+    let mejor = null;
+    const probar = items => {
+      const comprado = items.reduce((s, x) => s + x.n * x.p.tam, 0), costo = items.reduce((s, x) => s + x.n * x.p.precio, 0);
+      if (comprado + 1e-9 < total) return;
+      if (!mejor || costo < mejor.costo - 0.5 || (Math.abs(costo - mejor.costo) <= 0.5 && comprado < mejor.comprado)) mejor = { items: items.filter(x => x.n > 0), comprado, costo };
+    };
+    ps.forEach(G => {
+      probar([{ p: G, n: Math.ceil(total / G.tam - 1e-9) }]);
+      const nG = Math.floor(total / G.tam + 1e-9), falta = total - nG * G.tam;
+      if (falta > 1e-9) ps.forEach(C => { if (C !== G) probar([{ p: G, n: nG }, { p: C, n: Math.ceil(falta / C.tam - 1e-9) }]); });
+    });
+    if (!mejor) return null;
+    mejor.texto = mejor.items.map(x => x.n + " × " + x.p.nombre).join(" + ");
+    mejor.sobra = mejor.comprado - total;
+    return mejor;
+  }
   function costoCompra(ins, total){
+    const plan = planCompra(ins, total); if (plan) return plan.costo;
     if (!tienePrecio(ins) || !total) return 0;
     if (ins.unidad === "u") return Math.max(1, Math.ceil(total - 1e-9)) * ins.precio;
     return Math.ceil(total/100)/10 * ins.precio;
@@ -384,6 +405,25 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
           compras.push([CAT_LABEL[ins.categoria] || "", cap(ins.nombre), q.n, q.u, ins.donde || "", tengo[k] ? "sí" : "", tienePrecio(ins) ? ins.precio : "", tienePrecio(ins) ? uPrecio(ins) : "", tienePrecio(ins) ? c : "sin precio", ins.fuente || ""]); });
       compras.push([], ["", "PRESUPUESTO TOTAL", "", "", "", "", "", "", totalCosto, ""]);
       add("Compras", compras, [16,30,10,12,16,10,10,10,14,50]);
+      // pedido para el mayorista: cantidades que necesito vs. cómo se vende
+      const ped = [["PEDIDO DISTRIDIET · " + e.nombre.toUpperCase()], ["Lo que necesitás para el menú y la forma más barata de comprarlo con las presentaciones de la lista."], [],
+        ["Ingrediente", "Necesitás", "Presentaciones que vende", "Qué pedir", "Total que recibís", "Te sobra", "Costo del pedido", "Nota"]];
+      let totalPed = 0;
+      Object.keys(tot).filter(k => (S.insumos[k] || {}).donde === "Distridiet" && tot[k].total > 0)
+        .sort((a, b) => (S.insumos[a].nombre || a).localeCompare(S.insumos[b].nombre || b, "es"))
+        .forEach(k => {
+          const ins = S.insumos[k], n = tot[k].total, plan = planCompra(ins, n);
+          const disp = (ins.presentaciones || []).map(p => p.nombre + " ($" + Math.round(p.precio).toLocaleString("es-AR") + ")").join(" · ");
+          let nota = "";
+          if (plan){
+            totalPed += plan.costo;
+            if (plan.sobra > plan.comprado * 0.5) nota = "Sobra más de la mitad: es la presentación más chica que venden. Guardalo para el próximo evento.";
+            else if (plan.items.length > 1) nota = "Combina tamaños para no pagar de más.";
+          } else nota = "Sin presentación cargada.";
+          ped.push([cap(ins.nombre), cantCocina(ins, n), disp, plan ? plan.texto : "", plan ? cantCocina(ins, plan.comprado) : "", plan && plan.sobra > 0 ? cantCocina(ins, plan.sobra) : "-", plan ? Math.round(plan.costo) : "", nota]);
+        });
+      ped.push([], ["", "", "", "", "", "TOTAL PEDIDO", Math.round(totalPed), ""]);
+      add("Pedido Distridiet", ped, [26, 14, 52, 34, 16, 12, 16, 60]);
       const menu = [["Comida","Plato","Tipo","Personas","Costo por persona","Costo total"]];
       (e.platos||[]).forEach(p => { const r = S.recetas[p.receta]; const cp = r ? Math.round(costoReceta(r).s) : 0; menu.push([p.comida || "", r ? r.nombre : "Receta borrada", r ? TIPOS[r.tipo] || "" : "", Number(p.personas)||0, cp, cp * (Number(p.personas)||0)]); });
       add("Menú", menu, [24,38,12,10,16,14]);
@@ -564,7 +604,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
               <button class="check" data-tengo="${esc(k)}" aria-pressed="${done}" aria-label="Marcar ${esc(ins.nombre)} como comprado o pedido">${done ? "✓" : ""}</button>
               <button class="linkish grow" data-open="${esc(k)}" aria-expanded="${!!open}">
                 <div class="name">${esc(cap(ins.nombre))}</div>
-                ${ins.donde ? `<div class="sub">${esc(ins.donde)}</div>` : ""}
+                ${ins.donde || planCompra(ins, o.total) ? `<div class="sub">${esc([ins.donde, (planCompra(ins, o.total) || {}).texto].filter(Boolean).join(" · "))}</div>` : ""}
               </button>
               <div class="qty">${o.total ? esc(fmtQty(ins, o.total)) : '<span class="pill warn">a criterio</span>'}${o.total ? `<div class="sub">${tienePrecio(ins) ? esc(money(costoCompra(ins, o.total))) : '<span class="pill warn">sin precio</span>'}</div>` : ""}</div>
             </div>
