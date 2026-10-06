@@ -328,7 +328,12 @@ html,body{margin:0}
   }
   const personalCant = (e, id) => { const v = e?.personal?.cant?.[id]; return v == null ? personalDefecto(id, equipoPersonas(e)) : Number(v) || 0; };
   function horasEvento(e){ const s = servicios(e), h = personalCfg().horas; return s.desayuno * h.desayuno + s.almuerzo * h.almuerzo + s.cena * h.cena; }
-  function costoPersonal(e){ if (!(e?.platos || []).length) return 0; const hs = horasEvento(e); return personalCfg().roles.reduce((s, r) => s + personalCant(e, r.id) * (Number(r.tarifa) || 0) * hs, 0); }
+  // montos fijos por evento: si el evento los tiene, reemplazan el cálculo por hora
+  const personalFijos = e => (e?.personal?.fijos || []).filter(f => (f.nombre || "").trim() || Number(f.monto));
+  function costoPersonal(e){
+    const fj = personalFijos(e); if (fj.length) return fj.reduce((s, f) => s + (Number(f.monto) || 0), 0);
+    if (!(e?.platos || []).length) return 0; const hs = horasEvento(e); return personalCfg().roles.reduce((s, r) => s + personalCant(e, r.id) * (Number(r.tarifa) || 0) * hs, 0);
+  }
 
   const utensiliosOrden = () => Object.entries(S.utensilios).sort((x, y) => (GRUPOS_UT.indexOf(x[1].grupo) - GRUPOS_UT.indexOf(y[1].grupo)) || ((x[1].orden || 0) - (y[1].orden || 0)) || x[1].nombre.localeCompare(y[1].nombre, "es"));
 
@@ -454,11 +459,19 @@ html,body{margin:0}
       const ut = [["Grupo","Utensilio","Cantidad para " + nUt + " personas","Lo tengo","Nota"]];
       utensiliosOrden().forEach(([id, u]) => ut.push([u.grupo || "", u.nombre, cantUtensilio(u, nUt), utOk[id] ? "sí" : "", u.nota || ""]));
       add("Utensilios", ut, [16,34,14,9,50]);
-      const cfgP = personalCfg(), sv = servicios(e), hsP = horasEvento(e);
-      const per = [["Rol","Cantidad","Pago por hora","Horas por persona","Total","Fuente"]];
-      cfgP.roles.forEach(r => { const c = personalCant(e, r.id); per.push([r.nombre, c, Number(r.tarifa) || 0, hsP, Math.round(c * (Number(r.tarifa) || 0) * hsP), r.fuente || ""]); });
-      per.push([], ["Servicios", Object.keys(TIPOS_SERV).map(t => `${sv[t]} ${TIPOS_SERV[t].toLowerCase()} de ${cfgP.horas[t]} h`).join(", ")], ["TOTAL PERSONAL", "", "", "", Math.round(costoPersonal(e)), ""]);
-      add("Personal", per, [24,10,14,16,14,70]);
+      const fjP = personalFijos(e);
+      if (fjP.length){
+        const per = [["Pago","Monto fijo"]];
+        fjP.forEach(f => per.push([f.nombre || "", Math.round(Number(f.monto) || 0)]));
+        per.push([], ["TOTAL PERSONAL", Math.round(costoPersonal(e))]);
+        add("Personal", per, [34,16]);
+      } else {
+        const cfgP = personalCfg(), sv = servicios(e), hsP = horasEvento(e);
+        const per = [["Rol","Cantidad","Pago por hora","Horas por persona","Total","Fuente"]];
+        cfgP.roles.forEach(r => { const c = personalCant(e, r.id); per.push([r.nombre, c, Number(r.tarifa) || 0, hsP, Math.round(c * (Number(r.tarifa) || 0) * hsP), r.fuente || ""]); });
+        per.push([], ["Servicios", Object.keys(TIPOS_SERV).map(t => `${sv[t]} ${TIPOS_SERV[t].toLowerCase()} de ${cfgP.horas[t]} h`).join(", ")], ["TOTAL PERSONAL", "", "", "", Math.round(costoPersonal(e)), ""]);
+        add("Personal", per, [24,10,14,16,14,70]);
+      }
       const det = [["Comida","Plato","Personas","Ingrediente","Por persona","Unidad","Total","Unidad total"]];
       (e.platos||[]).forEach(p => { const r = S.recetas[p.receta]; if (!r) return; (r.items||[]).forEach(it => { const ins = S.insumos[it.insumo] || {nombre:it.insumo}; const u = ins.unidad === "u"; const t = (Number(it.cant)||0) * (Number(p.personas)||0); det.push([p.comida || "", r.nombre, Number(p.personas)||0, cap(ins.nombre), Number(it.cant)||0, u ? (ins.etiqueta || "unidad") : uBase(ins), u ? Math.round(t*100)/100 : Math.round(t)/1000, u ? (ins.etiqueta || "unidad") : uGrande(ins)]); }); });
       add("Detalle por plato", det, [24,38,10,28,12,10,10,12]);
@@ -759,10 +772,21 @@ html,body{margin:0}
     });
     v.querySelectorAll("[data-rol]").forEach(b => b.onclick = () => rolSheet(b.dataset.rol));
     const hb = $("horasEdit"); if (hb) hb.onclick = horasSheet;
+    const fe = $("fijosEdit"); if (fe) fe.onclick = fijosSheet;
+    const fo = $("fijosOff"); if (fo) fo.onclick = () => { if (!confirm("¿Volver a calcular el personal por hora en este evento?")) return; e.personal = Object.assign({}, e.personal || {}); delete e.personal.fijos; saveEvent(true); render(); };
     $("utNew").onclick = () => utensilioSheet(null);
   }
 
   function personalHtml(e){
+    const fj = personalFijos(e);
+    if (fj.length) return `<section class="group">
+      <div class="ghead"><span class="eyebrow">Personal</span><span class="note">${esc(money(costoPersonal(e)))}</span></div>
+      <div class="card">
+        ${fj.map(f => `<div class="row"><div class="grow"><div class="name">${esc(f.nombre || "Sin nombre")}</div><div class="sub">Monto fijo</div></div><div class="qty" style="font-size:16px">${esc(money(Number(f.monto) || 0))}</div></div>`).join("")}
+        <div class="actions"><button class="btn ghost sm" id="fijosEdit">Cambiar montos</button><button class="btn ghost sm" id="fijosOff">Volver al pago por hora</button></div>
+      </div>
+      <p class="note">En este evento el personal se paga con montos fijos acordados, y se suman al presupuesto total. Los otros eventos siguen con el cálculo por hora.</p>
+    </section>`;
     const cfg = personalCfg(), s = servicios(e), h = cfg.horas, hs = horasEvento(e);
     const servTxt = Object.keys(TIPOS_SERV).filter(t => s[t]).map(t => `${s[t]} ${TIPOS_SERV[t].toLowerCase()} de ${nf(h[t], 1)} h`).join(" · ") || "Todavía no hay servicios en el menú";
     const total = costoPersonal(e);
@@ -784,8 +808,37 @@ html,body{margin:0}
           </div>
         </div>`; }).join("")}
       </div>
-      <p class="note">El pago se calcula por hora según los servicios de tu menú y se suma al presupuesto total. La cantidad de cocineros sugerida cambia con las personas (1 hasta 50, 2 hasta 100, 3 hasta 200). Tocá un rol para cambiar lo que pagás por hora.</p>
+      <div class="actions"><button class="btn ghost sm" id="fijosEdit">Usar montos fijos en este evento</button></div>
+      <p class="note">El pago se calcula por hora según los servicios de tu menú y se suma al presupuesto total. La cantidad de cocineros sugerida cambia con las personas (1 hasta 50, 2 hasta 100, 3 hasta 200). Tocá un rol para cambiar lo que pagás por hora. Si ya acordaste un monto cerrado, usá montos fijos.</p>
     </section>`;
+  }
+
+  function fijosSheet(){
+    const e = ev(); if (!e) return;
+    const filas = (e.personal?.fijos || []).length ? e.personal.fijos.map(f => Object.assign({}, f)) : [{ nombre:"Cocineros", monto:"" }, { nombre:"Desayunos", monto:"" }];
+    const el = sheet(`
+      <div><span class="eyebrow">Personal</span><h2>Montos fijos</h2></div>
+      <div id="fjRows"></div>
+      <div class="actions" style="justify-content:flex-start"><button class="btn ghost sm" id="fjAdd">+ Agregar pago</button></div>
+      <p class="note">Solo para este evento. Reemplaza el cálculo por hora.</p>
+      <div class="actions"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="fjOk">Guardar</button></div>`);
+    const pintar = () => { el.querySelector("#fjRows").innerHTML = filas.map((f, i) => `
+      <div class="two" style="grid-template-columns:2fr 1fr auto;align-items:end">
+        <div class="field"><label for="fjN${i}">Pago</label><input id="fjN${i}" data-fjn="${i}" value="${esc(f.nombre || "")}" placeholder="Ej: Cocineros"></div>
+        <div class="field"><label for="fjM${i}">Monto ($)</label><input id="fjM${i}" data-fjm="${i}" type="number" inputmode="decimal" min="0" step="any" value="${f.monto === "" || f.monto == null ? "" : Number(f.monto)}"></div>
+        <button class="btn ghost sm" data-fjdel="${i}" aria-label="Quitar ${esc(f.nombre || "pago")}">✕</button>
+      </div>`).join("");
+      el.querySelectorAll("[data-fjn]").forEach(x => x.oninput = () => filas[x.dataset.fjn].nombre = x.value);
+      el.querySelectorAll("[data-fjm]").forEach(x => x.oninput = () => filas[x.dataset.fjm].monto = x.value);
+      el.querySelectorAll("[data-fjdel]").forEach(x => x.onclick = () => { filas.splice(Number(x.dataset.fjdel), 1); pintar(); });
+    };
+    pintar();
+    el.querySelector("#fjAdd").onclick = () => { filas.push({ nombre:"", monto:"" }); pintar(); };
+    el.querySelector("#fjOk").onclick = () => {
+      const limpias = filas.map(f => ({ nombre: (f.nombre || "").trim(), monto: Math.max(0, Number(String(f.monto).replace(",", ".")) || 0) })).filter(f => f.nombre || f.monto);
+      if (!limpias.length){ toast("Cargá al menos un pago"); return; }
+      e.personal = Object.assign({}, e.personal || {}, { fijos: limpias }); saveEvent(true); closeSheet(); render(); toast("Montos guardados");
+    };
   }
 
   function rolSheet(id){
