@@ -208,10 +208,25 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
   // costo teórico de una cantidad exacta (para el costo por persona de cada plato)
   function costoExacto(ins, cant){ if (!tienePrecio(ins)) return 0; return ins.unidad === "u" ? cant * ins.precio : cant / 1000 * ins.precio; }
   function costoReceta(r){ let s = 0, falta = 0; (r?.items || []).forEach(it => { const ins = S.insumos[it.insumo]; if (it.cant && !tienePrecio(ins)) falta++; s += costoExacto(ins, Number(it.cant) || 0); }); return { s, falta }; }
+  // gastos reales del evento (tickets): cada renglón puede ir atado a un insumo, con la cantidad comprada en su unidad base
+  function gastosEv(e){
+    const porIns = {}, cantIns = {}; let total = 0;
+    (e?.gastos || []).forEach(t => (t.items || []).forEach(it => { const m = Number(it.importe) || 0; total += m;
+      if (it.insumo){ porIns[it.insumo] = (porIns[it.insumo] || 0) + m; cantIns[it.insumo] = (cantIns[it.insumo] || 0) + (Number(it.cant) || 0); } }));
+    return { total, porIns, cantIns };
+  }
+  // lo que falta comprar de un insumo: si se compró sin cantidad (limpieza, a ojo) se da por cubierto
+  function restante(g, k, need){
+    if (g.porIns[k] == null) return need;
+    const c = g.cantIns[k]; if (!(c > 0)) return 0;
+    const f = need - c; return f > need * 0.03 ? f : 0;
+  }
+  // costo de un insumo: lo gastado en tickets + lo que falta comprar al precio estimado
+  const costoIns = (ins, k, need, g) => (g.porIns[k] || 0) + costoCompra(ins, restante(g, k, need));
   function presupuesto(e, soloFalta){
-    const tot = compute(e), tengo = e?.tengo || {}; let s = 0, sin = 0;
-    Object.keys(tot).forEach(k => { if (soloFalta && tengo[k]) return; const ins = S.insumos[k]; if (tot[k].total && !tienePrecio(ins)) sin++; s += costoCompra(ins, tot[k].total); });
-    return { s, sin };
+    const tot = compute(e), tengo = e?.tengo || {}, g = gastosEv(e); let s = soloFalta ? 0 : g.total, sin = 0;
+    Object.keys(tot).forEach(k => { if (soloFalta && tengo[k]) return; const ins = S.insumos[k]; const f = restante(g, k, tot[k].total); if (f && !tienePrecio(ins)) sin++; s += costoCompra(ins, f); });
+    return { s, sin, gastado: g.total };
   }
   const precioLabel = ins => tienePrecio(ins) ? money(ins.precio) + (" por " + uPrecio(ins)) : "sin precio";
 
@@ -402,22 +417,34 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
     const add = (name, rows, widths) => { const ws = X.utils.aoa_to_sheet(rows); ws["!cols"] = widths.map(w => ({wch:w})); X.utils.book_append_sheet(wb, ws, name); };
     const e = ev();
     if (e){
-      const tot = compute(e), tengo = e.tengo || {};
-      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde se compra","Comprado","Precio","Precio por","Costo estimado","Fuente del precio"]];
-      let totalCosto = 0;
+      const tot = compute(e), tengo = e.tengo || {}, g = gastosEv(e);
+      const compras = [["Categoría","Ingrediente","Cantidad","Unidad","Dónde se compra","Comprado","Precio","Precio por","Gastado real","Falta comprar","Costo de lo que falta","Costo total","Fuente del precio"]];
+      let totalCosto = 0, totalReal = 0, totalFalta = 0;
       Object.keys(tot).sort((a, b) => { const ia = S.insumos[a] || {}, ib = S.insumos[b] || {}; return (CATS.indexOf(ia.categoria) - CATS.indexOf(ib.categoria)) || (ia.nombre || a).localeCompare(ib.nombre || b, "es"); })
-        .forEach(k => { const ins = S.insumos[k] || {nombre:k}; const q = cantCompra(ins, tot[k].total); const c = Math.round(costoCompra(ins, tot[k].total)); totalCosto += c;
-          compras.push([CAT_LABEL[ins.categoria] || "", cap(ins.nombre), q.n, q.u, ins.donde || "", tengo[k] ? "sí" : "", tienePrecio(ins) ? ins.precio : "", tienePrecio(ins) ? uPrecio(ins) : "", tienePrecio(ins) ? c : "sin precio", ins.fuente || ""]); });
-      compras.push([], ["", "PRESUPUESTO TOTAL", "", "", "", "", "", "", totalCosto, ""]);
-      add("Compras", compras, [16,30,10,12,16,10,10,10,14,50]);
+        .forEach(k => { const ins = S.insumos[k] || {nombre:k}; const q = cantCompra(ins, tot[k].total); const real = g.porIns[k], f = restante(g, k, tot[k].total), cf = Math.round(costoCompra(ins, f)), c = Math.round((real || 0) + cf);
+          totalCosto += c; totalReal += real || 0; totalFalta += cf;
+          compras.push([CAT_LABEL[ins.categoria] || "", cap(ins.nombre), q.n, q.u, ins.donde || "", real != null ? (f ? "parcial" : "sí") : tengo[k] ? "sí" : "", tienePrecio(ins) ? ins.precio : "", tienePrecio(ins) ? uPrecio(ins) : "", real != null ? Math.round(real) : "", f ? fmtQty(ins, f) : "-", f ? (tienePrecio(ins) || planCompra(ins, f) ? cf : "sin precio") : "", c, ins.fuente || ""]); });
+      const otros = g.total - totalReal;
+      if (otros > 0.5) compras.push(["Otros", "Gastos de tickets fuera de la lista (ver hoja Gastos reales)", "", "", "", "sí", "", "", Math.round(otros), "-", "", Math.round(otros), ""]);
+      compras.push([], ["", "YA GASTADO (tickets)", "", "", "", "", "", "", Math.round(g.total), "", "", "", ""],
+        ["", "FALTA COMPRAR (estimado)", "", "", "", "", "", "", "", "", Math.round(totalFalta), "", ""],
+        ["", g.total ? "PRESUPUESTO FINAL DE COMPRAS" : "PRESUPUESTO TOTAL", "", "", "", "", "", "", "", "", "", Math.round(totalCosto + Math.max(0, otros)), ""]);
+      add("Compras", compras, [16,30,10,12,16,10,10,10,13,14,14,13,50]);
+      if ((e.gastos || []).length){
+        const gr = [["Fecha","Lugar","Renglón del ticket","Importe","Va a (ingrediente de la app)","Nota del ticket"]];
+        e.gastos.forEach(t => { (t.items || []).forEach(it => { const ins = it.insumo && S.insumos[it.insumo]; gr.push([t.fecha || "", t.lugar || "", it.desc || "", Math.round((Number(it.importe) || 0) * 100) / 100, ins ? cap(ins.nombre) : "fuera de la lista", t.nota || ""]); });
+          gr.push(["", "", "TOTAL " + (t.lugar || "").toUpperCase(), Math.round((t.items || []).reduce((s, it) => s + (Number(it.importe) || 0), 0) * 100) / 100, "", ""], []); });
+        gr.push(["", "", "TOTAL GASTADO", Math.round(g.total * 100) / 100, "", ""]);
+        add("Gastos reales", gr, [12,24,44,12,30,40]);
+      }
       // pedido para el mayorista: cantidades que necesito vs. cómo se vende
       const ped = [["PEDIDO DISTRIDIET · " + e.nombre.toUpperCase()], ["Lo que necesitás para el menú y la forma más barata de comprarlo con las presentaciones de la lista."], [],
         ["Ingrediente", "Necesitás", "Presentaciones que vende", "Qué pedir", "Total que recibís", "Te sobra", "Costo del pedido", "Nota"]];
       let totalPed = 0;
-      Object.keys(tot).filter(k => (S.insumos[k] || {}).donde === "Distridiet" && tot[k].total > 0)
+      Object.keys(tot).filter(k => (S.insumos[k] || {}).donde === "Distridiet" && restante(g, k, tot[k].total) > 0)
         .sort((a, b) => (S.insumos[a].nombre || a).localeCompare(S.insumos[b].nombre || b, "es"))
         .forEach(k => {
-          const ins = S.insumos[k], n = tot[k].total, plan = planCompra(ins, n);
+          const ins = S.insumos[k], n = restante(g, k, tot[k].total), plan = planCompra(ins, n);
           const disp = (ins.presentaciones || []).map(p => p.nombre + " ($" + Math.round(p.precio).toLocaleString("es-AR") + ")").join(" · ");
           let nota = "";
           if (plan){
@@ -588,6 +615,25 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
       const li = $("ing-" + p.id); if (li && r){ li.innerHTML = ingItems(r, Number(p.personas) || 0); const tg = li.closest(".recwrap").querySelector(".ingtoggle span"); if (tg) tg.textContent = (r.items||[]).length + " ingredientes para " + (Number(p.personas)||0) + " personas"; } });
   }
 
+  function compradoTxt(ins, k, need, g){
+    const c = g.cantIns[k], f = restante(g, k, need);
+    return "Comprado " + money(g.porIns[k]) + (c > 0 ? " (" + fmtQty(ins, c) + ")" : "") + (f ? " · falta " + fmtQty(ins, f) : " · cubierto");
+  }
+  function gastosHtml(e){
+    const gs = e.gastos || []; if (!gs.length) return "";
+    const sumT = t => (t.items || []).reduce((s, it) => s + (Number(it.importe) || 0), 0);
+    return `<section class="group">
+      <div class="ghead"><span class="eyebrow">Gastos reales</span><span class="note">${gs.length} ${gs.length === 1 ? "ticket" : "tickets"} · ${esc(money(gs.reduce((s, t) => s + sumT(t), 0)))}</span></div>
+      <div class="card">${gs.map(t => { const k = "g:" + t.id, open = S.open[k]; return `
+        <div class="row">
+          <button class="linkish grow" data-open="${esc(k)}" aria-expanded="${!!open}"><div class="name">${esc(t.lugar || "Sin lugar")}</div><div class="sub">${esc([t.fecha, (t.items || []).length + " renglones", t.nota].filter(Boolean).join(" · "))}</div></button>
+          <div class="qty" style="font-size:16px">${esc(money(sumT(t)))}</div>
+        </div>
+        ${open ? `<div class="detail">${(t.items || []).map(it => { const ins = it.insumo && S.insumos[it.insumo]; return `<span>${esc(it.desc)} · ${esc(money(Number(it.importe) || 0))}${ins ? " → " + esc(cap(ins.nombre)) : " · fuera de la lista"}</span>`; }).join("")}</div>` : ""}`; }).join("")}
+      </div>
+      <p class="note">Lo comprado cuenta con el precio real del ticket y lo que falta se sigue estimando: así el presupuesto final se va ajustando. Tocá un ticket para ver el detalle.</p>
+    </section>`;
+  }
   function renderCompras(v){
     const e = ev();
     if (!e){ v.innerHTML = '<div class="empty">Creá un evento y armá su menú para ver qué comprar.</div>'; return; }
@@ -597,15 +643,17 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
     const byCat = {};
     keys.forEach(k => { const ins = S.insumos[k] || {nombre:k, categoria:"Almacen", unidad:"g"}; const c = CATS.includes(ins.categoria) ? ins.categoria : "Almacen"; (byCat[c] = byCat[c] || []).push(k); });
     const pend = keys.filter(k => !tengo[k]).length;
-    const pTot = presupuesto(e), pFal = presupuesto(e, true);
+    const pTot = presupuesto(e), pFal = presupuesto(e, true), g = gastosEv(e);
     v.className = "group";
     v.innerHTML = `
       <div class="stats">
-        <div class="stat"><b>${money(pTot.s)}</b><span>presupuesto total</span></div>
+        <div class="stat"><b>${money(pTot.s)}</b><span>${g.total ? "presupuesto final" : "presupuesto total"}</span></div>
+        ${g.total ? `<div class="stat"><b>${money(g.total)}</b><span>ya gastado</span></div>` : ""}
         <div class="stat"><b>${money(pFal.s)}</b><span>falta comprar (${pend})</span></div>
-        <div class="stat"><b>${keys.length - pend} de ${keys.length}</b><span>comprados o pedidos</span></div>
+        ${g.total ? "" : `<div class="stat"><b>${keys.length - pend} de ${keys.length}</b><span>comprados o pedidos</span></div>`}
       </div>
       ${pTot.sin ? `<p class="note"><span class="pill warn">${pTot.sin} sin precio</span> no suman al presupuesto. Tocá el ingrediente y cargale el precio.</p>` : ""}
+      ${gastosHtml(e)}
       <div class="ghead">
         <div class="chips">
           <button class="chip" id="fFal" aria-pressed="${S.faltan}">Por comprar</button>
@@ -616,16 +664,17 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
       ${CATS.filter(c => byCat[c]).map(c => {
         const list = byCat[c].filter(k => !S.faltan || !tengo[k]).sort((a, b) => (S.insumos[a]?.nombre || a).localeCompare(S.insumos[b]?.nombre || b, "es"));
         if (!list.length) return "";
-        const sub = list.reduce((s, k) => s + costoCompra(S.insumos[k], tot[k].total), 0);
+        const sub = list.reduce((s, k) => s + costoIns(S.insumos[k], k, tot[k].total, g), 0);
         return `<section class="group"><div class="ghead"><span class="eyebrow">${CAT_LABEL[c]}</span><span class="note">${list.length} · ${money(sub)}</span></div>
           <div class="card">${list.map(k => { const ins = S.insumos[k] || {nombre:k}; const o = tot[k]; const done = !!tengo[k]; const open = S.open[k]; return `
             <div class="row${done ? " done" : ""}">
               <button class="check" data-tengo="${esc(k)}" aria-pressed="${done}" aria-label="Marcar ${esc(ins.nombre)} como comprado o pedido">${done ? "✓" : ""}</button>
               <button class="linkish grow" data-open="${esc(k)}" aria-expanded="${!!open}">
                 <div class="name">${esc(cap(ins.nombre))}</div>
-                ${ins.donde || planCompra(ins, o.total) ? `<div class="sub">${esc([ins.donde, (planCompra(ins, o.total) || {}).texto].filter(Boolean).join(" · "))}</div>` : ""}
+                ${ins.donde || planCompra(ins, o.total) ? `<div class="sub">${esc([ins.donde, g.porIns[k] == null ? (planCompra(ins, o.total) || {}).texto : ""].filter(Boolean).join(" · "))}</div>` : ""}
+                ${g.porIns[k] != null ? `<div class="sub">${esc(compradoTxt(ins, k, o.total, g))}</div>` : ""}
               </button>
-              <div class="qty">${o.total ? esc(fmtQty(ins, o.total)) : '<span class="pill warn">a criterio</span>'}${o.total ? `<div class="sub">${tienePrecio(ins) ? esc(money(costoCompra(ins, o.total))) : '<span class="pill warn">sin precio</span>'}</div>` : ""}</div>
+              <div class="qty">${o.total ? esc(fmtQty(ins, o.total)) : '<span class="pill warn">a criterio</span>'}${o.total ? `<div class="sub">${tienePrecio(ins) || g.porIns[k] != null ? esc(money(costoIns(ins, k, o.total, g))) : '<span class="pill warn">sin precio</span>'}</div>` : ""}</div>
             </div>
             ${open ? `<div class="detail">${o.por.map(x => `<span>${esc(x.comida || "")} · ${esc(x.plato)}: ${x.c ? esc(fmtQty(ins, x.c)) : "sin gramaje"}</span>`).join("")}
               <span class="precio-line"><b>${esc(precioLabel(ins))}</b>${ins.fuente ? " · " + esc(ins.fuente) : ""}</span>
@@ -694,8 +743,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent);background:var(--accent
     const n = equipoPersonas(e), d = equipoDias(e), sug = personasSugeridas(e), ok = e.utOk || {};
     const limp = Object.entries(S.insumos).filter(([k, i]) => Number(i.porCienDia) > 0).sort((a, b) => a[1].nombre.localeCompare(b[1].nombre, "es"));
     let costoLimp = 0;
-    const tengoL = e.tengo || {}; const limpOk = limp.filter(([k]) => tengoL[k]).length;
-    const limpRows = limp.map(([k, ins]) => { const t = ins.porCienDia * n / 100 * d; const c = costoCompra(ins, t); costoLimp += c; const hecho = !!tengoL[k]; return `
+    const tengoL = e.tengo || {}; const limpOk = limp.filter(([k]) => tengoL[k]).length; const gL = gastosEv(e);
+    const limpRows = limp.map(([k, ins]) => { const t = ins.porCienDia * n / 100 * d; const c = costoIns(ins, k, t, gL); costoLimp += c; const hecho = !!tengoL[k]; return `
       <div class="row${hecho ? " done" : ""}"><button class="check" data-tengo="${esc(k)}" aria-pressed="${hecho}" aria-label="Marcar ${esc(ins.nombre)} como comprado">${hecho ? "✓" : ""}</button><button class="linkish grow" data-precio="${esc(k)}"><div class="name">${esc(cap(ins.nombre))}</div><div class="sub">${esc(nf(ins.porCienDia, 2))} por cada 100 personas por día · ${esc(precioLabel(ins))}</div></button>
         <div class="qty">${esc(fmtQty(ins, t))}<div class="sub">${esc(money(c))}</div></div></div>`; }).join("");
     const ut = utensiliosOrden();
