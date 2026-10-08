@@ -233,10 +233,11 @@ html,body{margin:0}
   function costoReceta(r){ let s = 0, falta = 0; (r?.items || []).forEach(it => { const ins = S.insumos[it.insumo]; if (it.cant && !tienePrecio(ins)) falta++; s += costoExacto(ins, Number(it.cant) || 0); }); return { s, falta }; }
   // gastos reales del evento (tickets): cada renglón puede ir atado a un insumo, con la cantidad comprada en su unidad base
   function gastosEv(e){
-    const porIns = {}, cantIns = {}; let total = 0;
-    (e?.gastos || []).forEach(t => (t.items || []).forEach(it => { const m = Number(it.importe) || 0; total += m;
+    // renglones "aparte" (gastos personales que vinieron en el mismo ticket) se listan pero no suman a cocina
+    const porIns = {}, cantIns = {}; let total = 0, aparte = 0;
+    (e?.gastos || []).forEach(t => (t.items || []).forEach(it => { const m = Number(it.importe) || 0; if (it.aparte){ aparte += m; return; } total += m;
       if (it.insumo){ porIns[it.insumo] = (porIns[it.insumo] || 0) + m; cantIns[it.insumo] = (cantIns[it.insumo] || 0) + (Number(it.cant) || 0); } }));
-    return { total, porIns, cantIns };
+    return { total, porIns, cantIns, aparte };
   }
   // lo que falta comprar de un insumo: si se compró sin cantidad (limpieza, a ojo) se da por cubierto
   function restante(g, k, need){
@@ -452,12 +453,17 @@ html,body{margin:0}
       compras.push([], ["", "YA GASTADO (tickets)", "", "", "", "", "", "", Math.round(g.total), "", "", "", ""],
         ["", "FALTA COMPRAR (estimado)", "", "", "", "", "", "", "", "", Math.round(totalFalta), "", ""],
         ["", g.total ? "PRESUPUESTO FINAL DE COMPRAS" : "PRESUPUESTO TOTAL", "", "", "", "", "", "", "", "", "", Math.round(totalCosto + Math.max(0, otros)), ""]);
+      if (g.aparte) compras.push([], ["", "Aparte (no suma): gastos personales en los tickets, ver hoja Gastos reales", "", "", "", "", "", "", Math.round(g.aparte), "", "", "", ""]);
       add("Compras", compras, [16,30,10,12,16,10,10,10,13,14,14,13,50]);
       if ((e.gastos || []).length){
         const gr = [["Fecha","Lugar","Renglón del ticket","Importe","Va a (ingrediente de la app)","Nota del ticket"]];
-        e.gastos.forEach(t => { (t.items || []).forEach(it => { const ins = it.insumo && S.insumos[it.insumo]; gr.push([t.fecha || "", t.lugar || "", it.desc || "", Math.round((Number(it.importe) || 0) * 100) / 100, ins ? cap(ins.nombre) : "fuera de la lista", t.nota || ""]); });
-          gr.push(["", "", "TOTAL " + (t.lugar || "").toUpperCase(), Math.round((t.items || []).reduce((s, it) => s + (Number(it.importe) || 0), 0) * 100) / 100, "", ""], []); });
-        gr.push(["", "", "TOTAL GASTADO", Math.round(g.total * 100) / 100, "", ""]);
+        const r2 = n => Math.round((Number(n) || 0) * 100) / 100, apartes = {};
+        e.gastos.forEach(t => { const its = (t.items || []).filter(it => !it.aparte);
+          its.forEach(it => { const ins = it.insumo && S.insumos[it.insumo]; gr.push([t.fecha || "", t.lugar || "", it.desc || "", r2(it.importe), ins ? cap(ins.nombre) : "fuera de la lista (otros)", t.nota || ""]); });
+          (t.items || []).filter(it => it.aparte).forEach(it => (apartes[it.aparte] = apartes[it.aparte] || []).push([t.fecha || "", t.lugar || "", it.desc || "", r2(it.importe), "aparte: no suma a cocina", t.nota || ""]));
+          gr.push(["", "", "TOTAL " + (t.lugar || "").toUpperCase(), r2(its.reduce((s, it) => s + (Number(it.importe) || 0), 0)), "", ""], []); });
+        gr.push(["", "", "TOTAL GASTADO EN COCINA", r2(g.total), "", ""]);
+        Object.keys(apartes).forEach(nom => { gr.push([], [nom.toUpperCase() + " (aparte, no suma a cocina)"]); apartes[nom].forEach(x => gr.push(x)); gr.push(["", "", "TOTAL " + nom.toUpperCase(), r2(apartes[nom].reduce((s, x) => s + x[3], 0)), "", ""]); });
         add("Gastos reales", gr, [12,24,44,12,30,40]);
       }
       // pedido para el mayorista: cantidades que necesito vs. cómo se vende
@@ -644,7 +650,7 @@ html,body{margin:0}
   }
   function gastosHtml(e){
     const gs = e.gastos || []; if (!gs.length) return "";
-    const sumT = t => (t.items || []).reduce((s, it) => s + (Number(it.importe) || 0), 0);
+    const sumT = t => (t.items || []).reduce((s, it) => s + (it.aparte ? 0 : Number(it.importe) || 0), 0);
     return `<section class="group">
       <div class="ghead"><span class="eyebrow">Gastos reales</span><span class="note">${gs.length} ${gs.length === 1 ? "ticket" : "tickets"} · ${esc(money(gs.reduce((s, t) => s + sumT(t), 0)))}</span></div>
       <div class="card">${gs.map(t => { const k = "g:" + t.id, open = S.open[k]; return `
@@ -652,8 +658,9 @@ html,body{margin:0}
           <button class="linkish grow" data-open="${esc(k)}" aria-expanded="${!!open}"><div class="name">${esc(t.lugar || "Sin lugar")}</div><div class="sub">${esc([t.fecha, (t.items || []).length + " renglones", t.nota].filter(Boolean).join(" · "))}</div></button>
           <div class="qty" style="font-size:16px">${esc(money(sumT(t)))}</div>
         </div>
-        ${open ? `<div class="detail">${(t.items || []).map(it => { const ins = it.insumo && S.insumos[it.insumo]; return `<span>${esc(it.desc)} · ${esc(money(Number(it.importe) || 0))}${ins ? " → " + esc(cap(ins.nombre)) : " · fuera de la lista"}</span>`; }).join("")}</div>` : ""}`; }).join("")}
+        ${open ? `<div class="detail">${(t.items || []).map(it => { const ins = it.insumo && S.insumos[it.insumo]; return `<span>${esc(it.desc)} · ${esc(money(Number(it.importe) || 0))}${it.aparte ? " · aparte: " + esc(it.aparte) + " (no suma)" : ins ? " → " + esc(cap(ins.nombre)) : " · fuera de la lista"}</span>`; }).join("")}</div>` : ""}`; }).join("")}
       </div>
+      ${gastosEv(e).aparte ? `<p class="note">Aparte, sin sumar a cocina: ${esc(money(gastosEv(e).aparte))} de gastos personales que vinieron en los tickets.</p>` : ""}
       <p class="note">Lo comprado cuenta con el precio real del ticket y lo que falta se sigue estimando: así el presupuesto final se va ajustando. Tocá un ticket para ver el detalle.</p>
     </section>`;
   }
