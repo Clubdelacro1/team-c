@@ -1,4 +1,4 @@
-# Visita la base de Supabase cada 2 días para que el plan gratis no pause el proyecto
+# Visita la base de Supabase todos los días para que el plan gratis no pause el proyecto
 # (lo pausa a los 7 días sin uso). Si hace más de 45 días que nadie toca el repo,
 # además guarda la fecha en .github/ultima-visita.txt: GitHub apaga las tareas
 # programadas de repos sin movimiento por 60 días.
@@ -6,7 +6,7 @@ name: Mantener Supabase activo
 
 on:
   schedule:
-    - cron: "17 13 */2 * *"
+    - cron: "17 13 * * *"   # todos los días, 10:17 de Argentina
   workflow_dispatch:
 
 permissions:
