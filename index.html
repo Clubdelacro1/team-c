@@ -167,8 +167,8 @@ html,body{margin:0}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
-  const CATS = ["Verduleria","Carnes","Lacteos","Almacen","Secos / Granos","Panaderia","Condimentos","Limpieza"];
-  const CAT_LABEL = {"Verduleria":"Verdulería","Carnes":"Carnes","Lacteos":"Lácteos","Almacen":"Almacén","Secos / Granos":"Secos y granos","Panaderia":"Panadería","Condimentos":"Condimentos y básicos","Limpieza":"Limpieza y descartables"};
+  const CATS = ["Verduleria","Carnes","Lacteos","Almacen","Secos / Granos","Panaderia","Condimentos","Especiales","Limpieza"];
+  const CAT_LABEL = {"Verduleria":"Verdulería","Carnes":"Carnes","Lacteos":"Lácteos","Almacen":"Almacén","Secos / Granos":"Secos y granos","Panaderia":"Panadería","Condimentos":"Condimentos y básicos","Especiales":"Especiales sin TACC y veganos","Limpieza":"Limpieza y descartables"};
   const GRUPOS_UT = ["Cocción y gas","Ollas y sartenes","Preparación","Servicio","Guardado y agua","Higiene y seguridad","Equipo de cocina"];
   const TIPOS = {veggie:"Veggie", carne:"Carne", general:"Para todos"};
   const STOP = new Set(["de","con","y","la","el","los","las","al","a","en","para","p"]);
@@ -283,6 +283,12 @@ html,body{margin:0}
         const c = (Number(it.cant) || 0) * (Number(p.personas) || 0);
         o.total += c; o.por.push({plato:r.nombre, comida:p.comida, c});
       });
+    });
+    // extras del evento: insumos sueltos que no salen de ninguna receta (pedidos especiales, café, etc.), con su cantidad total
+    (e?.extras || []).forEach(x => {
+      const c = Number(x.cant) || 0; if (!x.insumo || !c) return;
+      const o = out[x.insumo] || (out[x.insumo] = {total:0, por:[]});
+      o.total += c; o.por.push({plato:"Extras del evento", comida:x.nota || "", c});
     });
     // limpieza y descartables: se calcula por cada 100 personas y por día
     if ((e?.platos || []).length){
